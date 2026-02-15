@@ -213,8 +213,19 @@ mod tests {
     use std::fs;
     use tempfile::NamedTempFile;
 
+    /// Reset the global backups storage (for testing only)
+    #[allow(dead_code)]
+    fn reset_backups() {
+        if let Ok(mut backups) = init_backups().lock() {
+            backups.clear();
+        }
+    }
+
     #[test]
     fn test_register_and_restore_backup() {
+        // Reset global state before test
+        reset_backups();
+
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_str().unwrap();
         let original_content = "original content";
@@ -236,6 +247,9 @@ mod tests {
 
     #[test]
     fn test_cleanup_idempotent() {
+        // Reset global state before test
+        reset_backups();
+
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_str().unwrap();
         let original_content = "original content";
@@ -268,6 +282,9 @@ mod tests {
 
     #[test]
     fn test_multiple_backups() {
+        // Reset global state before test
+        reset_backups();
+
         let temp1 = NamedTempFile::new().unwrap();
         let temp2 = NamedTempFile::new().unwrap();
         let path1 = temp1.path().to_str().unwrap();

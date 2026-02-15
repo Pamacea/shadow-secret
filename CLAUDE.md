@@ -1,6 +1,6 @@
 # Shadow Secret - Project Context
 
-> **Version:** 0.2.0
+> **Version:** 0.2.1
 > **Type:** CLI Tool (Rust + NPM wrapper)
 > **Status:** Active Development
 

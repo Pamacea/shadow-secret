@@ -6,6 +6,11 @@
  * This script acts as a bridge between NPM and the native Rust binary.
  * It detects the platform and spawns the correct binary with proper
  * terminal inheritance for an seamless user experience.
+ *
+ * Platform support:
+ * - Windows (x64): shadow-secret.exe
+ * - Linux (x64): shadow-secret (TODO: Add via CI/CD)
+ * - macOS (x64/ARM64): shadow-secret (TODO: Add via CI/CD)
  */
 
 const { spawn } = require('child_process');
@@ -17,6 +22,8 @@ const platform = process.platform;
 const isWindows = platform === 'win32';
 
 // Binary name based on platform
+// Note: For now, only Windows binary is included
+// Linux and macOS will be added in future releases via CI/CD
 const binaryName = isWindows ? 'shadow-secret.exe' : 'shadow-secret';
 
 // Resolve binary path relative to this script
