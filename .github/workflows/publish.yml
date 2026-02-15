@@ -11,13 +11,19 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-publish:
-    name: Build and Publish
+  build:
+    name: Build ${{ matrix.os }} (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         include:
+          # Windows (x64)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: shadow-secret.exe
+            artifact_name: binary-windows
+
           # Linux (x64)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -30,7 +36,7 @@ jobs:
             binary_name: shadow-secret
             artifact_name: binary-macos
 
-          # macOS (ARM64 / Apple Silicon)
+          # macOS (ARM64)
           - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: shadow-secret
@@ -59,20 +65,21 @@ jobs:
           cd packages/core
           cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename binary (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          cd packages/core
-          mv target/${{ matrix.target }}/release/shadow-secret target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-          echo "Binary renamed for ${{ matrix.os }}"
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: packages/core/target/${{ matrix.target }}/release/${{ matrix.binary_name }}
 
-      # Download all binaries and create NPM package
+  publish:
+    name: Publish to NPM
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
@@ -82,11 +89,6 @@ jobs:
         run: |
           chmod +x packages/cli-npm/bin/shadow-secret
           chmod +x packages/cli-npm/bin/shadow-secret.exe || true
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Update bridge.js for multi-platform
         run: |
@@ -100,13 +102,6 @@ jobs:
           console.log('✓ Updated bridge.js for multi-platform support');
           "
 
-      - name: Commit binaries and package
-        run: |
-          cd packages/cli-npm
-          git add bin/ lib/bridge.js
-          git commit -m "chore: add multi-platform binaries for v${{ github.ref_name }}"
-          || echo "No changes to commit"
-
       - name: Publish to NPM
         run: |
           cd packages/cli-npm
@@ -114,11 +109,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # Wait for all platforms to complete
-  publish-success:
-    name: Publish Success Notification
+  create-release:
+    name: Create GitHub Release
+    needs: publish
     runs-on: ubuntu-latest
-    needs: build-and-publish
 
     steps:
       - name: Checkout
