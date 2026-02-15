@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-02-15
+
+### Fixed
+
+- Fixed GitHub Actions workflow for multi-platform builds
+- Added Windows x64 to build matrix (was missing)
+- Removed problematic "rename binary" step that caused "same file" error
+- Separated workflow into 3 jobs: build, publish, create-release
+- Fixed artifact download and executable permissions handling
+- All 4 platforms now build in parallel (Windows, Linux x64, macOS x64/ARM64)
+
 ## [0.3.1] - 2026-02-15
 
 ### Fixed
@@ -35,13 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed NPM package to correctly include compiled binaries
 - Removed `bin/.gitignore` (prevented binaries from being packaged)
 - Added proper `.gitignore` at package level instead
-
-## [0.2.1] - 2026-02-15
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.1] - 2026-02-15
 
