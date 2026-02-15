@@ -1,0 +1,32 @@
+{
+  "name": "shadow-secret",
+  "version": "0.1.0",
+  "description": "Secure secret management for modern development workflows",
+  "bin": {
+    "shadow-secret": "lib/bridge.js"
+  },
+  "scripts": {
+    "test": "node lib/bridge.js --version"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "package.json"
+  ],
+  "keywords": [
+    "secrets",
+    "sops",
+    "security",
+    "age",
+    "encryption",
+    "cli",
+    "rust"
+  ],
+  "author": "Yanis <yanis@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pamacea/shadow-secret"
+  },
+  "homepage": "https://github.com/Pamacea/shadow-secret#readme"
+}

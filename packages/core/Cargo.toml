@@ -1,0 +1,67 @@
+[package]
+name = "shadow-secret"
+version = "0.1.0"
+edition = "2021"
+authors = ["Yanis <yanis@example.com>"]
+description = "A secure, distributed secret management system written in Rust"
+license = "MIT"
+repository = "https://github.com/Pamacea/shadow-secret"
+readme = "README.md"
+keywords = ["secret", "security", "vault", "distributed", "encryption"]
+categories = ["command-line-utilities", "cryptography"]
+
+[dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+
+# CLI parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Signal handling
+ctrlc = "3.4"
+
+# System information
+sysinfo = "0.31"
+
+# Binary detection
+which = "6.0"
+
+# Home directory detection
+dirs = "5.0"
+
+# Age encryption
+age = "0.11"
+
+# User prompts
+dialoguer = "0.11"
+
+[dev-dependencies]
+# Testing utilities
+tokio-test = "0.4"
+
+# Temp file management for testing
+tempfile = "3.10"
+
+# Test assertions
+assert_cmd = "2.0"
+
+# Predicate library for CLI testing
+predicates = "3.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0

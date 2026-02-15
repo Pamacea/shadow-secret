@@ -1,0 +1,42 @@
+# Rust build artifacts (packages/core/)
+packages/core/target/
+packages/core/Cargo.lock
+
+# NPM binaries (injected during CI/CD, never committed)
+packages/cli-npm/bin/*.exe
+packages/cli-npm/bin/shadow-secret
+packages/cli-npm/bin/shadow-secret.exe
+packages/cli-npm/bin/shadow-secret-*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Configuration (don't commit user config!)
+shadow-secret.yaml
+.env
+
+# Vault data (NEVER commit secrets!)
+.vault/
+*.key
+*.enc
+
+# Backups (may contain secrets)
+backups/
+*.backup
+
+# Logs
+*.log
+
+# Test output
+test-output/
+
+# Node modules (if any for tooling)
+node_modules/
