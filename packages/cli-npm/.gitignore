@@ -1,0 +1,11 @@
+# Ignore compiled binaries during development
+# These will be included in the NPM package but not committed to git
+bin/*.exe
+bin/shadow-secret
+bin/shadow-secret-*
+
+# Node modules (development)
+node_modules/
+
+# NPM tarballs (development)
+*.tgz

@@ -1,6 +1,6 @@
 # Shadow Secret - Project Context
 
-> **Version:** 0.2.1
+> **Version:** 0.3.0 (Unreleased)
 > **Type:** CLI Tool (Rust + NPM wrapper)
 > **Status:** Active Development
 
@@ -316,6 +316,79 @@ Types:
 - `RELEASE` - Breaking changes (MAJOR)
 - `UPDATE` - New features (MINOR)
 - `PATCH` - Bug fixes (PATCH)
+
+---
+
+## 🌍 Multi-Platform Release Strategy (v0.3.0)
+
+**Documentation:** See [docs/MULTI_PLATFORM_STRATEGY.md](../docs/MULTI_PLATFORM_STRATEGY.md)
+
+### Overview
+
+Starting with v0.3.0, Shadow Secret will use **GitHub Actions** to:
+
+1. **Automatically compile binaries** for all platforms on release
+2. **Package all binaries** in single NPM package
+3. **Publish to NPM** automatically on tag push
+
+### Supported Platforms
+
+| Platform | Architecture | Binary Name |
+|----------|-------------|-------------|
+| Windows | x64 | `shadow-secret.exe` |
+| Linux | x64 | `shadow-secret` |
+| macOS | x64 | `snapshot-secret` |
+| macOS | ARM64 (Apple Silicon) | `shadow-secret` |
+
+### Release Workflow
+
+```bash
+# 1. Update versions
+# Edit packages/core/Cargo.toml
+# Edit packages/cli-npm/package.json
+
+# 2. Tag and push (triggers CI/CD)
+git tag -a v0.3.0 -m "Release v0.3.0 - Multi-Platform Support"
+git push origin main
+git push origin v0.3.0
+
+# 3. GitHub Actions automatically:
+#    - Builds for all 4 platforms
+#    - Packages all binaries in NPM package
+#    - Publishes to @oalacea/shadow-secret
+```
+
+### Development Workflow
+
+For testing before release:
+
+```bash
+# Build locally (your platform only)
+cd packages/core
+cargo build --release
+cp target/release/shadow-secret.exe ../cli-npm/bin/  # Windows
+cp target/release/shadow-secret ../cli-npm/bin/       # Unix
+
+# Test locally
+cd ../cli-npm
+npm pack
+npm install -g ./oalacea-shadow-secret-0.3.0.tgz
+shadow-secret --version
+```
+
+### GitHub Actions Workflow
+
+**File:** `.github/workflows/publish.yml`
+
+**Triggers:** Push to `main` with tag pattern `v*`
+
+**Matrix Build:**
+- Ubuntu Linux (x86_64-unknown-linux-gnu)
+- macOS x64 (x86_64-apple-darwin)
+- macOS ARM64 (aarch64-apple-darwin)
+- Windows (x86_64-pc-windows-msvc)
+
+**Result:** All 4 binaries compiled and packaged automatically
 
 ---
 
