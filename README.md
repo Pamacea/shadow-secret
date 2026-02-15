@@ -6,7 +6,7 @@ A secure, distributed secret management system for modern development workflows.
 
 ```bash
 # Install via NPM
-npm install -g shadow-secret
+npm install -g @oalacea/shadow-secret
 
 # Initialize project
 shadow-secret init-project

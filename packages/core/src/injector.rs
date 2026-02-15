@@ -56,7 +56,7 @@ pub struct FileBackup {
     file_path: PathBuf,
     /// Original file permissions (Unix-only)
     #[cfg(unix)]
-    original_permissions: std::os::unix::fs::Permissions,
+    original_permissions: std::fs::Permissions,
 }
 
 impl FileBackup {
@@ -117,7 +117,7 @@ impl FileBackup {
         // Restore original permissions (Unix-only)
         #[cfg(unix)]
         {
-            fs::set_permissions(&self.file_path, self.original_permissions).with_context(|| {
+            fs::set_permissions(&self.file_path, self.original_permissions.clone()).with_context(|| {
                 format!(
                     "Failed to restore permissions for: {}",
                     self.file_path.display()
