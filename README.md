@@ -14,8 +14,11 @@ shadow-secret init-global
 # Option 2: Initialize project-specific configuration
 shadow-secret init-project
 
-# Unlock secrets
+# Unlock secrets (project-specific)
 shadow-secret unlock
+
+# Or unlock global secrets
+shadow-secret unlock-global
 
 # Push to Vercel
 shadow-secret push-cloud
@@ -83,15 +86,67 @@ Creates `.sops.yaml` and `.enc.env` with your age public key.
 
 ### `unlock`
 
-Load secrets from vault and inject into target files.
-
-**Automatic Config Discovery:**
-1. Looks for `shadow-secret.yaml` in current directory
-2. Falls back to `~/.config/shadow-secret/global.yaml` if not found
+Load secrets from project-specific vault and inject into target files.
 
 ```bash
 shadow-secret unlock
 ```
+
+**Loads:** `shadow-secret.yaml` from current directory (project-specific config only)
+
+**Does NOT fall back to global config.** Use `unlock-global` for global secrets.
+
+### `unlock-global`
+
+Load secrets from global vault and inject into target files.
+
+```bash
+shadow-secret unlock-global
+```
+
+**Loads:** `~/.config/shadow-secret/global.yaml`
+
+**Best for:**
+- Centralized secret management across multiple projects
+- Encrypted drive setups (see [Encrypted Drive Setup](#encrypted-drive-setup))
+- Shared development team secrets
+
+### Encrypted Drive Setup
+
+Starting with v0.3.8, you can store your encrypted vault on a separate drive (VeraCrypt, FileVault, LUKS) for enhanced security.
+
+1. **Initialize global config:**
+   ```bash
+   shadow-secret init-global
+   ```
+
+2. **Edit `~/.config/shadow-secret/global.yaml` to add `vault_path`:**
+
+   ```yaml
+   vault:
+     source: "global.enc.env"
+     # Windows (VeraCrypt)
+     vault_path: "E:/encrypted-drive/global.enc.env"
+     # macOS (FileVault)
+     # vault_path: "/Volumes/ShadowSecret/global.enc.env"
+     # Linux (LUKS)
+     # vault_path: "/mnt/encrypted/global.enc.env"
+     engine: "sops"
+     age_key_path: "~/.config/shadow-secret/keys.txt"
+   ```
+
+3. **Move vault to encrypted drive:**
+   ```bash
+   # Example for macOS
+   mv ~/.config/shadow-secret/global.enc.env /Volumes/ShadowSecret/
+   ```
+
+4. **Unlock (mount encrypted drive first):**
+   ```bash
+   shadow-secret unlock-global
+   ```
+
+For detailed encrypted drive setup instructions, see [docs/GLOBAL_SETUP.md](docs/GLOBAL_SETUP.md).
 
 ### `push-cloud`
 
@@ -169,9 +224,7 @@ targets:
 
 **Using Global Config in Projects:**
 
-Either:
-1. **No config needed** - Shadow Secret automatically falls back to global config
-2. **Project-specific override** - Create `shadow-secret.yaml` to customize per-project
+Use `shadow-secret unlock-global` to explicitly load global secrets. Alternatively, create a `shadow-secret.yaml` in your project directory to use project-specific configuration.
 
 ### Project-Specific Configuration
 

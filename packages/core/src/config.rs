@@ -12,6 +12,12 @@ pub struct VaultConfig {
     /// Path to the encrypted secrets file
     pub source: String,
 
+    /// Optional: Explicit vault path (overrides source-based resolution)
+    /// If specified, this path is used directly (absolute or ~/relative to home)
+    /// Useful for encrypted drives or custom vault locations
+    #[serde(default)]
+    pub vault_path: Option<String>,
+
     /// Encryption engine (currently only "sops" is supported)
     pub engine: String,
 
@@ -126,23 +132,44 @@ impl Config {
     }
 
     /// Get the absolute path for the vault source
-    pub fn vault_source_path(&self) -> Result<PathBuf> {
-        let path = Path::new(&self.vault.source);
-        if path.is_absolute() {
-            Ok(path.to_path_buf())
-        } else {
-            // Expand ~ to home directory if present
-            if self.vault.source.starts_with('~') {
-                let home = dirs::home_dir()
-                    .context("Failed to determine home directory")?;
-                let expanded = self.vault.source.replacen('~', home.to_str().unwrap(), 1);
-                Ok(PathBuf::from(expanded))
-            } else {
-                std::env::current_dir()
-                    .map(|dir| dir.join(&self.vault.source))
-                    .with_context(|| "Failed to get current directory")
-            }
+    ///
+    /// # Arguments
+    /// * `config_dir` - Directory containing the config file (for relative paths)
+    ///
+    /// # Resolution Order
+    /// 1. If `vault_path` is specified, use it directly
+    /// 2. If `source` is absolute, use it
+    /// 3. If `source` starts with `~`, expand to home
+    /// 4. Otherwise, relative to `config_dir` (not CWD)
+    pub fn vault_source_path(&self, config_dir: &Path) -> Result<PathBuf> {
+        // 1. Check explicit vault_path first (overrides source)
+        if let Some(ref vault_path) = self.vault.vault_path {
+            return Self::resolve_path(vault_path, config_dir);
         }
+
+        // 2. Fall back to source field
+        Self::resolve_path(&self.vault.source, config_dir)
+    }
+
+    /// Helper to resolve a path (absolute, ~, or relative to config_dir)
+    fn resolve_path(path_str: &str, config_dir: &Path) -> Result<PathBuf> {
+        let path = Path::new(path_str);
+
+        // Absolute path
+        if path.is_absolute() {
+            return Ok(path.to_path_buf());
+        }
+
+        // ~ expansion (home directory)
+        if path_str.starts_with('~') {
+            let home = dirs::home_dir()
+                .context("Failed to determine home directory")?;
+            let expanded = path_str.replacen('~', home.to_str().unwrap(), 1);
+            return Ok(PathBuf::from(expanded));
+        }
+
+        // Relative to config directory (CHANGED: was CWD)
+        Ok(config_dir.join(path))
     }
 }
 
@@ -155,7 +182,9 @@ mod tests {
         let config = Config {
             vault: VaultConfig {
                 source: "test.enc.env".to_string(),
+                vault_path: None,
                 engine: "sops".to_string(),
+                age_key_path: None,
                 require_mount: false,
             },
             targets: vec![
@@ -175,7 +204,9 @@ mod tests {
         let config = Config {
             vault: VaultConfig {
                 source: "".to_string(),
+                vault_path: None,
                 engine: "sops".to_string(),
+                age_key_path: None,
                 require_mount: false,
             },
             targets: vec![],
@@ -189,12 +220,118 @@ mod tests {
         let config = Config {
             vault: VaultConfig {
                 source: "test.enc.env".to_string(),
+                vault_path: None,
                 engine: "invalid".to_string(),
+                age_key_path: None,
                 require_mount: false,
             },
             targets: vec![],
         };
 
         assert!(config.validate().is_err());
+    }
+
+    // NEW TESTS for vault_path functionality
+
+    #[test]
+    fn test_vault_path_explicit_overrides_source() {
+        let config = Config {
+            vault: VaultConfig {
+                source: "ignored.enc.env".to_string(),
+                vault_path: Some("/absolute/path/vault.enc.env".to_string()),
+                engine: "sops".to_string(),
+                age_key_path: None,
+                require_mount: false,
+            },
+            targets: vec![],
+        };
+
+        let config_dir = Path::new("/any/dir");
+        let result = config.vault_source_path(config_dir).unwrap();
+
+        assert_eq!(result, PathBuf::from("/absolute/path/vault.enc.env"));
+    }
+
+    #[test]
+    fn test_vault_path_relative_to_config_dir() {
+        let config = Config {
+            vault: VaultConfig {
+                source: "vault.enc.env".to_string(),
+                vault_path: None,
+                engine: "sops".to_string(),
+                age_key_path: None,
+                require_mount: false,
+            },
+            targets: vec![],
+        };
+
+        let config_dir = Path::new("/home/user/.config/shadow-secret");
+        let result = config.vault_source_path(config_dir).unwrap();
+
+        assert_eq!(
+            result,
+            PathBuf::from("/home/user/.config/shadow-secret/vault.enc.env")
+        );
+    }
+
+    #[test]
+    fn test_vault_path_absolute() {
+        let config = Config {
+            vault: VaultConfig {
+                source: "/absolute/vault.enc.env".to_string(),
+                vault_path: None,
+                engine: "sops".to_string(),
+                age_key_path: None,
+                require_mount: false,
+            },
+            targets: vec![],
+        };
+
+        let config_dir = Path::new("/any/dir");
+        let result = config.vault_source_path(config_dir).unwrap();
+
+        assert_eq!(result, PathBuf::from("/absolute/vault.enc.env"));
+    }
+
+    #[test]
+    fn test_vault_path_tilde_expansion() {
+        let config = Config {
+            vault: VaultConfig {
+                source: "~/vault.enc.env".to_string(),
+                vault_path: None,
+                engine: "sops".to_string(),
+                age_key_path: None,
+                require_mount: false,
+            },
+            targets: vec![],
+        };
+
+        let config_dir = Path::new("/any/dir");
+        let result = config.vault_source_path(config_dir).unwrap();
+
+        // Should expand ~ to home directory
+        assert!(result.starts_with(dirs::home_dir().unwrap()));
+        assert!(result.ends_with("vault.enc.env"));
+    }
+
+    #[test]
+    fn test_vault_path_with_tilde_in_explicit_field() {
+        let config = Config {
+            vault: VaultConfig {
+                source: "ignored.enc.env".to_string(),
+                vault_path: Some("~/custom-drive/vault.enc.env".to_string()),
+                engine: "sops".to_string(),
+                age_key_path: None,
+                require_mount: false,
+            },
+            targets: vec![],
+        };
+
+        let config_dir = Path::new("/any/dir");
+        let result = config.vault_source_path(config_dir).unwrap();
+
+        // Should expand ~ in vault_path field
+        assert!(result.starts_with(dirs::home_dir().unwrap()));
+        assert!(result.ends_with("custom-drive/vault.enc.env"));
     }
 }

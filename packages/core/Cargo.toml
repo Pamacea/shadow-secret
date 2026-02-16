@@ -1,6 +1,6 @@
 [package]
 name = "shadow-secret"
-version = "0.3.7"
+version = "0.3.8"
 edition = "2021"
 authors = ["Yanis <yanis@example.com>"]
 description = "A secure, distributed secret management system written in Rust"

@@ -489,6 +489,15 @@ vault:
   # Path to encrypted secrets file (relative to this config)
   source: "global.enc.env"
 
+  # Optional: Explicit vault path (overrides source computation)
+  # Uncomment to specify custom location (useful for encrypted drives)
+  # Supports:
+  #   - Absolute paths: "C:/encrypted-drive/global.enc.env" (Windows)
+  #   - Absolute paths: "/Volumes/encrypted/global.enc.env" (macOS)
+  #   - Absolute paths: "/mnt/encrypted/global.enc.env" (Linux)
+  #   - Home-relative: "~/encrypted-drive/global.enc.env"
+  # vault_path: "/path/to/your/encrypted/drive/global.enc.env"
+
   # Encryption engine (sops with age)
   engine: "sops"
 
@@ -525,9 +534,17 @@ targets:
 #    sops --encrypt global.env.tmp > global.enc.env
 #    rm global.env.tmp
 #
+# ENCRYPTED DRIVE SUPPORT:
+#   If your ~/.config/shadow-secret/ is on an encrypted drive:
+#   1. Uncomment the vault_path field above
+#   2. Set it to the absolute path where global.enc.env is located
+#   3. Example: vault_path: "E:/shadow-secret/global.enc.env" (Windows)
+#   4. Example: vault_path: "/Volumes/ShadowSecret/global.enc.env" (macOS)
+#   5. Example: vault_path: "~/encrypted-drive/global.enc.env" (Linux)
+#
 # For project-specific usage:
 #    - Create shadow-secret.yaml in your project
-#    - Set vault.source to: "~/.config/shadow-secret/global.enc.env"
+#    - Set vault.source to point to this global.enc.env
 #    - Define your project-specific targets
 "#,
         default_key_path.display().to_string()

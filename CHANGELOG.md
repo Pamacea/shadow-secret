@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2026-02-16
+
+### Added
+
+- `unlock-global` command for explicit global secret unlocking
+- `vault_path` field to `VaultConfig` for explicit vault location
+- Support for encrypted drives with absolute paths (Windows, macOS, Linux)
+- Comprehensive error messages for path resolution issues
+- Tilde expansion (`~`) support in vault paths
+
+### Changed
+
+- `vault_source_path()` now resolves relative paths from config directory (not CWD)
+- `unlock` command now only loads project-specific config (no global fallback)
+- Improved path resolution with `~` expansion support
+- Enhanced error messages suggest `unlock-global` when appropriate
+
+### Fixed
+
+- Path resolution bug where global vault was searched in current directory
+- Encrypted drive support by allowing explicit `vault_path`
+- Confusing behavior where `unlock` tried both project and global configs
+
+### Migration
+
+If you were using `unlock` for global secrets:
+  Before: `shadow-secret unlock` (tried both)
+  After: `shadow-secret unlock-global` (explicit)
+
 ## [0.3.7] - 2026-02-16
 
 ### Added

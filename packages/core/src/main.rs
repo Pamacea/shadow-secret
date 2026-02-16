@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <yanis@example.com>")]
-#[command(version = "0.1.0")]
+#[command(version = "0.3.8")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -28,12 +28,15 @@ enum Commands {
     /// Check prerequisites and system configuration
     Doctor,
 
-    /// Unlock secrets and inject them into target files
+    /// Unlock secrets for current project (project-specific config only)
     Unlock {
         /// Path to the configuration file (default: shadow-secret.yaml)
         #[arg(short, long, default_value = "shadow-secret.yaml")]
         config: String,
     },
+
+    /// Unlock global secrets (global config only)
+    UnlockGlobal,
 
     /// Initialize a new project with secret management infrastructure
     InitProject {
@@ -192,26 +195,29 @@ fn run_doctor() -> Result<()> {
 }
 
 fn run_unlock(config_path: &str) -> Result<()> {
-    println!("🔓 Shadow Secret Unlock");
+    println!("🔓 Shadow Secret Unlock (Project)");
     println!("Loading configuration from: {}\n", config_path);
 
-    // Step 1: Load and validate configuration
-    let config = if config_path == "shadow-secret.yaml" {
-        // Use default lookup (project config -> global config)
-        Config::from_current_dir()?
-    } else {
-        // Use specified config file
-        Config::from_file(config_path)
-            .with_context(|| format!("Failed to load config from: {}", config_path))?
-    };
+    // Step 1: Load and validate configuration (project-specific only, no global fallback)
+    let config = Config::from_file(config_path)
+        .with_context(|| format!("Failed to load config from: {}", config_path))?;
 
     config.validate()
         .with_context(|| "Configuration validation failed")?;
 
     println!("✓ Configuration loaded and validated");
 
-    // Step 2: Load secrets from vault
-    let vault_path = config.vault_source_path()?;
+    // Step 2: Get config directory for path resolution
+    let config_abs_path = PathBuf::from(config_path)
+        .canonicalize()
+        .with_context(|| format!("Failed to resolve config file path: {}", config_path))?;
+
+    let config_dir = config_abs_path
+        .parent()
+        .context("Config file has no parent directory")?;
+
+    // Step 3: Load secrets from vault
+    let vault_path = config.vault_source_path(config_dir)?;
     let vault_path_str = vault_path.to_str()
         .ok_or_else(|| anyhow::anyhow!("Vault path contains invalid UTF-8"))?;
 
@@ -226,7 +232,7 @@ fn run_unlock(config_path: &str) -> Result<()> {
     let secrets = vault.all();
     println!("✓ Loaded {} secret(s)", secrets.len());
 
-    // Step 3: Inject secrets into each target
+    // Step 4: Inject secrets into each target
     println!("\n🎯 Injecting secrets into targets...");
 
     for target in &config.targets {
@@ -251,15 +257,88 @@ fn run_unlock(config_path: &str) -> Result<()> {
 
     println!("\n✓ All secrets injected successfully");
 
-    // Step 4: Setup signal handlers for cleanup
+    // Step 5: Setup signal handlers for cleanup
     cleaner::setup_signal_handlers();
 
     println!("\n🎉 Secrets are now unlocked and injected!");
     println!("Press Ctrl+C to lock secrets and restore original files.");
     println!("\nWaiting... (Press Ctrl+C to exit)\n");
 
-    // Step 5: Keep the process alive until Ctrl+C
+    // Step 6: Keep the process alive until Ctrl+C
     // We use a simple loop that sleeps to keep the process running
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+}
+
+fn run_unlock_global() -> Result<()> {
+    println!("🔓 Shadow Secret Unlock (Global)");
+    println!("Loading global configuration from ~/.config/shadow-secret/global.yaml\n");
+
+    // Step 1: Load global config explicitly
+    let global_config_path = dirs::home_dir()
+        .map(|home| home.join(".config/shadow-secret/global.yaml"))
+        .context("Failed to determine global config path")?;
+
+    let config = Config::from_file(&global_config_path)
+        .with_context(|| "Failed to load global config")?;
+
+    config.validate()
+        .with_context(|| "Global configuration validation failed")?;
+
+    println!("✓ Global configuration loaded and validated");
+
+    // Step 2: Get config directory for path resolution
+    let config_dir = global_config_path
+        .parent()
+        .context("Global config has no parent directory")?;
+
+    // Step 3: Load secrets from vault
+    let vault_path = config.vault_source_path(config_dir)?;
+    let vault_path_str = vault_path.to_str()
+        .ok_or_else(|| anyhow::anyhow!("Vault path contains invalid UTF-8"))?;
+
+    println!("📖 Loading secrets from: {}", vault_path_str);
+
+    // Extract age_key_path from config if available
+    let age_key_path = config.vault.age_key_path.as_deref();
+
+    let vault = Vault::load(vault_path_str, age_key_path)
+        .with_context(|| format!("Failed to load vault from: {}", vault_path_str))?;
+
+    let secrets = vault.all();
+    println!("✓ Loaded {} secret(s)", secrets.len());
+
+    // Step 4: Inject secrets into each target
+    println!("\n🎯 Injecting secrets into targets...");
+
+    for target in &config.targets {
+        println!("  → Target: {}", target.name);
+        println!("    File: {}", target.path);
+
+        let placeholders: Vec<String> = target.placeholders.iter().cloned().collect();
+
+        let backup = shadow_secret::injector::inject_secrets(
+            Path::new(&target.path),
+            secrets,
+            &placeholders,
+        ).with_context(|| format!("Failed to inject secrets into: {}", target.path))?;
+
+        cleaner::register_backup(&target.path, backup.content());
+
+        println!("    ✓ Injected {} placeholder(s)", placeholders.len());
+    }
+
+    println!("\n✓ All secrets injected successfully");
+
+    // Step 5: Setup signal handlers for cleanup
+    cleaner::setup_signal_handlers();
+
+    println!("\n🎉 Global secrets are now unlocked and injected!");
+    println!("Press Ctrl+C to lock secrets and restore original files.");
+    println!("\nWaiting... (Press Ctrl+C to exit)\n");
+
+    // Step 6: Keep the process alive until Ctrl+C
     loop {
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
@@ -304,8 +383,17 @@ fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) 
 
     println!("✓ Configuration loaded and validated");
 
-    // Step 2: Load secrets from vault
-    let vault_path = config.vault_source_path()?;
+    // Step 2: Get config directory for path resolution
+    let config_abs_path = PathBuf::from(config_path)
+        .canonicalize()
+        .with_context(|| format!("Failed to resolve config file path: {}", config_path))?;
+
+    let config_dir = config_abs_path
+        .parent()
+        .context("Config file has no parent directory")?;
+
+    // Step 3: Load secrets from vault
+    let vault_path = config.vault_source_path(config_dir)?;
     let vault_path_str = vault_path.to_str()
         .ok_or_else(|| anyhow::anyhow!("Vault path contains invalid UTF-8"))?;
 
@@ -320,7 +408,7 @@ fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) 
     let secrets: HashMap<String, String> = vault.all().clone();
     println!("✓ Loaded {} secret(s)", secrets.len());
 
-    // Step 3: Detect or use provided project ID
+    // Step 4: Detect or use provided project ID
     let project_id = if let Some(pid) = project_id {
         println!("🔗 Using provided project ID: {}", pid);
         Some(pid)
@@ -338,7 +426,7 @@ fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) 
         }
     };
 
-    // Step 4: Push secrets to Vercel
+    // Step 5: Push secrets to Vercel
     println!("\n🎯 Pushing secrets to Vercel...\n");
 
     // Push secrets using Vercel CLI
@@ -364,7 +452,16 @@ fn main() -> Result<()> {
         Commands::Unlock { config } => {
             if let Err(e) = run_unlock(&config) {
                 eprintln!("\nError: {}", e);
-                eprintln!("\n⚠️  Secrets may not be properly injected.");
+                eprintln!("\n⚠️  Project secrets may not be properly injected.");
+                eprintln!("💡 Run 'shadow-secret doctor' to check your configuration.");
+                eprintln!("💡 Use 'shadow-secret unlock-global' for global secrets.");
+                std::process::exit(1);
+            }
+        }
+        Commands::UnlockGlobal => {
+            if let Err(e) = run_unlock_global() {
+                eprintln!("\nError: {}", e);
+                eprintln!("\n⚠️  Global secrets may not be properly injected.");
                 eprintln!("💡 Run 'shadow-secret doctor' to check your configuration.");
                 std::process::exit(1);
             }
