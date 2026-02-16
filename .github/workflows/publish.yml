@@ -57,7 +57,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            packages/core/target
           key: ${{ runner.os }}-cargo-release-${{ matrix.target }}-${{ hashFiles('packages/core/Cargo.lock') }}
 
       - name: Build release binary
