@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-02-16
+
+### Added
+
+- `age_key_path` field in global.yaml for automatic SOPS key detection
+- Shadow Secret now automatically sets `SOPS_AGE_KEY_FILE` environment variable when calling SOPS
+- No manual environment variable configuration needed anymore
+
+### Fixed
+
+- SOPS encryption now works reliably with `--output` flag for in-place encryption
+- Fixed file extension matching in SOPS regex patterns
+- Enhanced documentation in global.yaml with automatic key path configuration
+
 ## [0.3.5] - 2026-02-16
 
 ### Added

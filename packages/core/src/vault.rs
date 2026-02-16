@@ -58,14 +58,14 @@ impl Vault {
     /// use shadow_secret::vault::Vault;
     ///
     /// # fn main() -> anyhow::Result<()> {
-    /// let vault = Vault::load("secrets.enc.yaml")?;
+    /// let vault = Vault::load("secrets.enc.yaml", None)?;
     /// let api_key = vault.get("API_KEY").unwrap();
     /// # Ok(())
     /// # }
     /// ```
-    pub fn load(encrypted_path: &str) -> Result<Self> {
+    pub fn load(encrypted_path: &str, age_key_path: Option<&str>) -> Result<Self> {
         // Execute SOPS and capture stdout directly to memory
-        let output = execute_sops(encrypted_path)?;
+        let output = execute_sops(encrypted_path, age_key_path)?;
 
         // Parse based on file extension
         let secrets = parse_output(encrypted_path, &output)?;
@@ -100,7 +100,13 @@ impl Vault {
 /// - Captures stdout as bytes directly
 /// - Never writes to disk
 /// - Validates SOPS installation
-fn execute_sops(encrypted_path: &str) -> Result<Vec<u8>> {
+/// - Uses age_key_path if provided to set SOPS_AGE_KEY_FILE environment variable
+fn execute_sops(encrypted_path: &str, age_key_path: Option<&str>) -> Result<Vec<u8>> {
+    // Set SOPS_AGE_KEY_FILE environment variable if age_key_path is provided
+    if let Some(key_path) = age_key_path {
+        std::env::set_var("SOPS_AGE_KEY_FILE", key_path);
+    }
+
     // Check if SOPS is installed
     let check = Command::new("sops").arg("--version").output();
 

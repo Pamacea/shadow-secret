@@ -217,7 +217,10 @@ fn run_unlock(config_path: &str) -> Result<()> {
 
     println!("📖 Loading secrets from: {}", vault_path_str);
 
-    let vault = Vault::load(vault_path_str)
+    // Extract age_key_path from config if available
+    let age_key_path = config.vault.age_key_path.as_deref();
+
+    let vault = Vault::load(vault_path_str, age_key_path)
         .with_context(|| format!("Failed to load vault from: {}", vault_path_str))?;
 
     let secrets = vault.all();
@@ -308,7 +311,10 @@ fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) 
 
     println!("📖 Loading secrets from: {}", vault_path_str);
 
-    let vault = Vault::load(vault_path_str)
+    // Extract age_key_path from config if available
+    let age_key_path = config.vault.age_key_path.as_deref();
+
+    let vault = Vault::load(vault_path_str, age_key_path)
         .with_context(|| format!("Failed to load vault from: {}", vault_path_str))?;
 
     let secrets: HashMap<String, String> = vault.all().clone();

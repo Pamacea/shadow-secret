@@ -15,6 +15,10 @@ pub struct VaultConfig {
     /// Encryption engine (currently only "sops" is supported)
     pub engine: String,
 
+    /// Path to age private key for SOPS encryption/decryption
+    #[serde(default)]
+    pub age_key_path: Option<String>,
+
     /// Whether to require the vault to be mounted (for VeraCrypt volumes)
     #[serde(default = "default_require_mount")]
     pub require_mount: bool,

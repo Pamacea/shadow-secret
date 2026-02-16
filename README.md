@@ -62,7 +62,7 @@ shadow-secret init-global
 ```
 
 Creates `~/.config/shadow-secret/` with:
-- `global.yaml` - Configuration file
+- `global.yaml` - Configuration file (with `age_key_path` for automatic SOPS key detection)
 - `global.enc.env` - Encrypted secrets
 - `.sops.yaml` - SOPS encryption rules
 
