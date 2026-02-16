@@ -1,0 +1,9 @@
+# Include binaries (override .gitignore)
+!bin/shadow-secret.exe
+!bin/shadow-secret
+!bin/shadow-secret-x64
+!bin/shadow-secret-arm64
+
+# Exclude dev files
+node_modules/
+*.tgz
