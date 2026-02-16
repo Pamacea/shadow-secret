@@ -8,7 +8,10 @@ A secure, distributed secret management system for modern development workflows.
 # Install via NPM
 npm install -g @oalacea/shadow-secret
 
-# Initialize project
+# Option 1: Initialize global configuration (recommended for first-time users)
+shadow-secret init-global
+
+# Option 2: Initialize project-specific configuration
 shadow-secret init-project
 
 # Unlock secrets
@@ -50,13 +53,23 @@ Check system prerequisites (sops, age, environment variables).
 shadow-secret doctor
 ```
 
-### `unlock`
+### `init-global`
 
-Load secrets from vault and inject into target files.
+Initialize global Shadow Secret configuration (recommended for first-time users).
 
 ```bash
-shadow-secret unlock
+shadow-secret init-global
 ```
+
+Creates `~/.config/shadow-secret/` with:
+- `global.yaml` - Configuration file
+- `global.enc.env` - Encrypted secrets
+- `.sops.yaml` - SOPS encryption rules
+
+**Benefits:**
+- Centralized secret management for all projects
+- Can be moved to encrypted drive (e.g., VeraCrypt volume)
+- Shared across multiple projects
 
 ### `init-project`
 
@@ -67,6 +80,18 @@ shadow-secret init-project
 ```
 
 Creates `.sops.yaml` and `.enc.env` with your age public key.
+
+### `unlock`
+
+Load secrets from vault and inject into target files.
+
+**Automatic Config Discovery:**
+1. Looks for `shadow-secret.yaml` in current directory
+2. Falls back to `~/.config/shadow-secret/global.yaml` if not found
+
+```bash
+shadow-secret unlock
+```
 
 ### `push-cloud`
 
@@ -120,11 +145,41 @@ sudo mv sops-v3.8.1.linux.amd64 /usr/local/bin/sops
 
 ## Configuration
 
+### Global Configuration (Recommended for Multiple Projects)
+
+Create a global configuration once:
+
+```bash
+shadow-secret init-global
+```
+
+This creates `~/.config/shadow-secret/global.yaml`:
+
+```yaml
+vault:
+  source: "global.enc.env"
+  engine: "sops"
+  require_mount: false
+
+targets:
+  - name: "example-target"
+    path: "config.json"
+    placeholders: ["$ALL"]  # Inject all secrets
+```
+
+**Using Global Config in Projects:**
+
+Either:
+1. **No config needed** - Shadow Secret automatically falls back to global config
+2. **Project-specific override** - Create `shadow-secret.yaml` to customize per-project
+
+### Project-Specific Configuration
+
 Create `shadow-secret.yaml` in your project root:
 
 ```yaml
 vault:
-  source: "path/to/.enc.env"  # Encrypted secrets file
+  source: ".enc.env"  # Or point to global: "~/.config/shadow-secret/global.enc.env"
   engine: "sops"
 
 targets:
@@ -132,6 +187,11 @@ targets:
     path: ".env"
     placeholders: ["API_KEY", "DATABASE_URL"]
 ```
+
+**Placeholders:**
+- `$ALL` - Inject all secrets
+- `SECRET_NAME` - Inject specific secret (e.g., `API_KEY`)
+- Mix and match as needed
 
 ## Security
 

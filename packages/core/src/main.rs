@@ -50,6 +50,9 @@ enum Commands {
         no_global: bool,
     },
 
+    /// Initialize global Shadow Secret configuration
+    InitGlobal,
+
     /// Push secrets from local .enc.env to Vercel cloud
     PushCloud {
         /// Path to the configuration file (default: shadow-secret.yaml)
@@ -193,8 +196,14 @@ fn run_unlock(config_path: &str) -> Result<()> {
     println!("Loading configuration from: {}\n", config_path);
 
     // Step 1: Load and validate configuration
-    let config = Config::from_file(config_path)
-        .with_context(|| format!("Failed to load config from: {}", config_path))?;
+    let config = if config_path == "shadow-secret.yaml" {
+        // Use default lookup (project config -> global config)
+        Config::from_current_dir()?
+    } else {
+        // Use specified config file
+        Config::from_file(config_path)
+            .with_context(|| format!("Failed to load config from: {}", config_path))?
+    };
 
     config.validate()
         .with_context(|| "Configuration validation failed")?;
@@ -271,6 +280,12 @@ fn run_init_project(
     };
 
     init_project(config)
+}
+
+fn run_init_global() -> Result<()> {
+    use shadow_secret::init::init_global;
+
+    init_global()
 }
 
 fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) -> Result<()> {
@@ -356,6 +371,14 @@ fn main() -> Result<()> {
             if let Err(e) = run_init_project(master_key, no_example, no_global) {
                 eprintln!("\nError: {}", e);
                 eprintln!("\n⚠️  Project initialization failed.");
+                eprintln!("💡 Run 'shadow-secret doctor' to check your configuration.");
+                std::process::exit(1);
+            }
+        }
+        Commands::InitGlobal => {
+            if let Err(e) = run_init_global() {
+                eprintln!("\nError: {}", e);
+                eprintln!("\n⚠️  Global initialization failed.");
                 eprintln!("💡 Run 'shadow-secret doctor' to check your configuration.");
                 std::process::exit(1);
             }

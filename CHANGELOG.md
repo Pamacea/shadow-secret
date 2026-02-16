@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-02-16
+
+### Added
+
+- `init-global` command for centralized secret management
+- Automatic fallback to global configuration when project-specific config is missing
+- Global configuration directory: `~/.config/shadow-secret/`
+- Support for moving configuration to encrypted drives (e.g., VeraCrypt volumes)
+- Enhanced config discovery with clear messaging when using global config
+
+### Changed
+
+- `unlock` command now automatically falls back to `~/.config/shadow-secret/global.yaml` if `shadow-secret.yaml` not found in current directory
+- Improved documentation with global configuration examples and usage patterns
+
+### Fixed
+
+- GitHub Actions workflows updated for monorepo structure (CI, Coverage, Publish)
+- All workflows now use correct paths (`packages/core/`)
+
 ## [0.3.3] - 2026-02-15
 
 ### Fixed

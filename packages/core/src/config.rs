@@ -60,8 +60,32 @@ impl Config {
     }
 
     /// Load configuration from shadow-secret.yaml in the current directory
+    /// Falls back to global config if not found
     pub fn from_current_dir() -> Result<Self> {
-        Self::from_file("shadow-secret.yaml")
+        // Try project-specific config first
+        let project_config = PathBuf::from("shadow-secret.yaml");
+        if project_config.exists() {
+            return Self::from_file(&project_config);
+        }
+
+        // Fall back to global config
+        let global_config = dirs::home_dir()
+            .map(|home| home.join(".config/shadow-secret/global.yaml"))
+            .context("Failed to determine global config path")?;
+
+        if global_config.exists() {
+            println!("🔑 Using global Shadow Secret configuration from ~/.config/shadow-secret/global.yaml");
+            return Self::from_file(&global_config);
+        }
+
+        anyhow::bail!(
+            "No Shadow Secret configuration found.\n\
+            Create one of:\n\
+            1. Project-specific: shadow-secret.yaml (in current directory)\n\
+            2. Global: ~/.config/shadow-secret/global.yaml\n\
+            \n\
+            Run 'shadow-secret init-global' to create a global configuration."
+        )
     }
 
     /// Validate the configuration
