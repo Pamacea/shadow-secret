@@ -186,12 +186,33 @@ pub fn inject_secrets(
     secrets: &HashMap<String, String>,
     placeholders: &[String],
 ) -> Result<FileBackup> {
+    eprintln!("🔍 [DEBUG] Starting injection for: {}", file_path.display());
+    eprintln!("🔍 [DEBUG] Placeholders: {:?}", placeholders);
+    eprintln!("🔍 [DEBUG] Secrets keys: {:?}", secrets.keys().collect::<Vec<_>>());
+
     // Create backup
-    let backup = FileBackup::create(file_path)?;
+    let backup = match FileBackup::create(file_path) {
+        Ok(b) => {
+            eprintln!("✓ [DEBUG] Backup created successfully");
+            b
+        }
+        Err(e) => {
+            eprintln!("❌ [DEBUG] Failed to create backup: {:#?}", e);
+            return Err(e.into());
+        }
+    };
 
     // Read file content
-    let content = fs::read_to_string(file_path)
-        .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+    let content = match fs::read_to_string(file_path) {
+        Ok(c) => {
+            eprintln!("✓ [DEBUG] File read successfully ({} bytes)", c.len());
+            c
+        }
+        Err(e) => {
+            eprintln!("❌ [DEBUG] Failed to read file: {:#?}", e);
+            return Err(e.into());
+        }
+    };
 
     // Detect file format and replace placeholders
     let extension = file_path
@@ -199,9 +220,22 @@ pub fn inject_secrets(
         .and_then(|ext| ext.to_str())
         .unwrap_or("");
 
+    eprintln!("🔍 [DEBUG] File extension: '{}'", extension);
+
     let modified_content = match extension {
-        "json" => replace_placeholders_json(&content, secrets, placeholders)
-            .with_context(|| format!("Failed to replace placeholders in JSON file: {}", file_path.display()))?,
+        "json" => {
+            eprintln!("🔍 [DEBUG] Processing as JSON...");
+            match replace_placeholders_json(&content, secrets, placeholders) {
+                Ok(c) => {
+                    eprintln!("✓ [DEBUG] JSON replacement successful");
+                    c
+                }
+                Err(e) => {
+                    eprintln!("❌ [DEBUG] JSON replacement failed: {:#?}", e);
+                    return Err(e);
+                }
+            }
+        }
         "yaml" | "yml" => replace_placeholders_yaml(&content, secrets, placeholders)
             .with_context(|| format!("Failed to replace placeholders in YAML file: {}", file_path.display()))?,
         "env" | "dotenv" => replace_placeholders(&content, secrets, placeholders),
@@ -219,12 +253,27 @@ pub fn inject_secrets(
     };
 
     // Write modified content back to file
-    let mut file = fs::File::create(file_path)
-        .with_context(|| format!("Failed to open file for writing: {}", file_path.display()))?;
+    eprintln!("🔍 [DEBUG] Writing modified content back to file...");
+    let mut file = match fs::File::create(file_path) {
+        Ok(f) => {
+            eprintln!("✓ [DEBUG] File opened for writing");
+            f
+        }
+        Err(e) => {
+            eprintln!("❌ [DEBUG] Failed to open file for writing: {:#?}", e);
+            return Err(e.into());
+        }
+    };
 
-    file.write_all(modified_content.as_bytes())
-        .with_context(|| format!("Failed to write modified content to: {}", file_path.display()))?;
+    match file.write_all(modified_content.as_bytes()) {
+        Ok(_) => eprintln!("✓ [DEBUG] Content written successfully"),
+        Err(e) => {
+            eprintln!("❌ [DEBUG] Failed to write content: {:#?}", e);
+            return Err(e.into());
+        }
+    }
 
+    eprintln!("✓ [DEBUG] Injection completed successfully");
     Ok(backup)
 }
 

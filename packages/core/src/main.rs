@@ -404,20 +404,23 @@ fn run_unlock(config_path: &str) -> Result<()> {
         println!("    ✓ Injected {} placeholder(s)", placeholders.len());
     }
 
-    println!("\n✓ All secrets injected successfully");
-
-    // Step 5: Setup signal handlers for cleanup
-    cleaner::setup_signal_handlers();
-
+    println!("\n✓ All secrets injected successfully!");
     println!("\n🎉 Secrets are now unlocked and injected!");
-    println!("Press Ctrl+C to lock secrets and restore original files.");
-    println!("\nWaiting... (Press Ctrl+C to exit)\n");
+    println!("👉 Press Enter to lock secrets and restore templates...");
 
-    // Step 6: Keep the process alive until Ctrl+C
-    // We use a simple loop that sleeps to keep the process running
-    loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-    }
+    // Wait for user input
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    println!("\n🔄 Restoring templates...");
+
+    // Restore all backups
+    cleaner::cleanup_and_restore();
+
+    println!("✓ Templates restored!");
+    println!("👋 See you next time!");
+
+    Ok(())
 }
 
 fn run_unlock_global() -> Result<()> {
@@ -478,19 +481,23 @@ fn run_unlock_global() -> Result<()> {
         println!("    ✓ Injected {} placeholder(s)", placeholders.len());
     }
 
-    println!("\n✓ All secrets injected successfully");
-
-    // Step 5: Setup signal handlers for cleanup
-    cleaner::setup_signal_handlers();
-
+    println!("\n✓ All secrets injected successfully!");
     println!("\n🎉 Global secrets are now unlocked and injected!");
-    println!("Press Ctrl+C to lock secrets and restore original files.");
-    println!("\nWaiting... (Press Ctrl+C to exit)\n");
+    println!("👉 Press Enter to lock secrets and restore templates...");
 
-    // Step 6: Keep the process alive until Ctrl+C
-    loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-    }
+    // Wait for user input
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    println!("\n🔄 Restoring templates...");
+
+    // Restore all backups
+    cleaner::cleanup_and_restore();
+
+    println!("✓ Templates restored!");
+    println!("👋 See you next time!");
+
+    Ok(())
 }
 
 fn run_init_project(

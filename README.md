@@ -246,6 +246,137 @@ targets:
 - `SECRET_NAME` - Inject specific secret (e.g., `API_KEY`)
 - Mix and match as needed
 
+### Placeholder Examples
+
+#### Example 1: Inject All Secrets (`$ALL`)
+
+**Secret file** (`global.enc.env`):
+```bash
+API_KEY=sk_live_123
+DATABASE_URL=postgresql://localhost/mydb
+SECRET_TOKEN=abc123xyz
+```
+
+**Target file** (`config.json`):
+```json
+{
+  "apiKey": "$ALL",
+  "settings": {
+    "database": "$ALL",
+    "token": "$ALL"
+  }
+}
+```
+
+**After unlock**:
+```json
+{
+  "apiKey": "sk_live_123",
+  "settings": {
+    "database": "postgresql://localhost/mydb",
+    "token": "abc123xyz"
+  }
+}
+```
+
+⚠️ **Note:** `$ALL` injects **all secrets** everywhere it appears. If you need specific secrets in specific places, use named placeholders instead.
+
+#### Example 2: Named Placeholders (Recommended for Multiple Secrets)
+
+**Secret file** (`global.enc.env`):
+```bash
+API_KEY=sk_live_123
+DATABASE_URL=postgresql://localhost/mydb
+DISCORD_TOKEN=discord_token_xyz
+WEBHOOK_SECRET=wh_secret_abc
+```
+
+**Target file** (`config.json`):
+```json
+{
+  "api": {
+    "key": "$API_KEY"
+  },
+  "database": {
+    "url": "$DATABASE_URL"
+  },
+  "integrations": {
+    "discord": {
+      "token": "$DISCORD_TOKEN"
+    },
+    "webhook": {
+      "secret": "$WEBHOOK_SECRET"
+    }
+  }
+}
+```
+
+**Configuration** (`global.yaml`):
+```yaml
+targets:
+  - name: "My App"
+    path: "config.json"
+    placeholders:
+      - "$API_KEY"
+      - "$DATABASE_URL"
+      - "$DISCORD_TOKEN"
+      - "$WEBHOOK_SECRET"
+```
+
+#### Example 3: ENV File Format
+
+**Secret file** (`.enc.env`):
+```bash
+PROD_API_KEY=secret_key_here
+STAGING_API_KEY=staging_key_here
+```
+
+**Target file** (`.env`):
+```bash
+API_KEY=$PROD_API_KEY
+STAGING_KEY=$STAGING_API_KEY
+DEBUG=true
+```
+
+**Configuration** (`shadow-secret.yaml`):
+```yaml
+targets:
+  - name: "Environment"
+    path: ".env"
+    placeholders:
+      - "$PROD_API_KEY"
+      - "$STAGING_API_KEY"
+```
+
+#### Example 4: YAML Configuration
+
+**Secret file** (`secrets.enc.yaml`):
+```yaml
+database:
+  host: localhost
+  password: my_secret_pass
+  user: admin
+```
+
+**Target file** (`config.yaml`):
+```yaml
+database:
+  host: localhost
+  password: "$DATABASE_PASSWORD"  # Will be injected
+  user: "$DATABASE_USER"
+  port: 5432
+```
+
+**Configuration** (`shadow-secret.yaml`):
+```yaml
+targets:
+  - name: "Database Config"
+    path: "config.yaml"
+    placeholders:
+      - "$DATABASE_PASSWORD"
+      - "$DATABASE_USER"
+```
+
 ## Security
 
 - Secrets are **never written to disk** in plain text (except target files while active)
