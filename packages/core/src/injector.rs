@@ -338,6 +338,9 @@ fn replace_placeholders_json(
     secrets: &HashMap<String, String>,
     placeholders: &[String],
 ) -> Result<String> {
+    // Strip UTF-8 BOM if present (EF BB BF)
+    let content = content.strip_prefix('\u{FEFF}').unwrap_or(content);
+
     // Parse JSON to preserve structure
     let mut json: serde_json::Value =
         serde_json::from_str(content).context("Failed to parse JSON content")?;
@@ -398,6 +401,9 @@ fn replace_placeholders_yaml(
     secrets: &HashMap<String, String>,
     placeholders: &[String],
 ) -> Result<String> {
+    // Strip UTF-8 BOM if present (EF BB BF)
+    let content = content.strip_prefix('\u{FEFF}').unwrap_or(content);
+
     // Parse YAML to preserve structure
     let yaml: serde_yaml::Value =
         serde_yaml::from_str(content).context("Failed to parse YAML content")?;

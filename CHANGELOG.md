@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-02-16
+
+### Fixed
+
+- **JSON/YAML parsing**: Fixed BOM (Byte Order Mark) handling in JSON and YAML files
+  - Files with UTF-8 BOM (`\uFEFF`) now parse correctly
+  - Error "expected value" at line 1, column 1 resolved
+  - BOM stripping applied before parsing in `replace_placeholders_json()` and `replace_placeholders_yaml()`
+
 ## [0.4.0] - 2025-02-16
 
 ### Changed
