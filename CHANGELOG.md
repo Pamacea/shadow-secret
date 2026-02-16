@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2026-02-16
+
+### Fixed
+
+- **Doctor command** now auto-detects global vs project mode
+  - No longer fails with "shadow-secret.yaml not found" when using `unlock-global`
+  - Suggests `unlock-global` when only global config exists
+  - Added helpful hints for missing `age_key_path` field
+
+- **Improved diagnostics** for missing `age_key_path` configuration
+  - Doctor now checks if `age_key_path` exists in config
+  - Provides clear instructions when field is missing
+  - Suggests proper YAML syntax for adding the field
+
+- **Documentation** added for `age_key_path` migration
+  - See `docs/AGE_KEY_PATH_MIGRATION.md` for upgrade guide
+  - Helps users update from older global.yaml format
+
+### Changed
+
+- Doctor now runs basic checks (sops, age, SOPS_AGE_KEY_FILE) even in global mode
+- Better error messages guide users to fix configuration issues
+
 ## [0.3.8] - 2026-02-16
 
 ### Added

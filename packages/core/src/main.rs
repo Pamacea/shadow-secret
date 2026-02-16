@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <yanis@example.com>")]
-#[command(version = "0.3.8")]
+#[command(version = "0.3.9")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -87,10 +87,9 @@ fn check_file_exists(path: &str) -> Result<bool> {
     Ok(Path::new(path).exists())
 }
 
-fn run_doctor() -> Result<()> {
-    println!("🔍 Shadow Secret Doctor");
-    println!("Checking prerequisites...\n");
-
+/// Run basic prerequisite checks (sops, age, SOPS_AGE_KEY_FILE)
+/// Used when checking system regardless of config mode
+fn run_basic_checks() -> Result<()> {
     let mut all_checks_passed = true;
 
     // Check 1: sops installation
@@ -135,6 +134,7 @@ fn run_doctor() -> Result<()> {
             println!("✗");
             println!("   ❌ $SOPS_AGE_KEY_FILE is not set");
             println!("   💡 Set it with: export SOPS_AGE_KEY_FILE=/path/to/key.txt");
+            println!("   💡 Or specify 'age_key_path' in global.yaml");
             all_checks_passed = false;
         }
         Err(e) => {
@@ -166,22 +166,171 @@ fn run_doctor() -> Result<()> {
         println!("   ⚠️  Skipped (environment variable not set)");
     }
 
-    // Check 5: Vault source path accessibility
-    print!("5. Checking vault source path accessibility... ");
-    // For now, we'll check if we can read the config file
-    match check_file_exists("shadow-secret.yaml") {
+    println!();
+    if all_checks_passed {
+        println!("✅ All basic checks passed! Your system is ready.");
+        Ok(())
+    } else {
+        println!("❌ Some checks failed. Please fix the issues above.");
+        Err(anyhow::anyhow!("Basic checks failed"))
+    }
+}
+
+fn run_doctor() -> Result<()> {
+    println!("🔍 Shadow Secret Doctor");
+    println!("Checking prerequisites...\n");
+
+    let mut all_checks_passed = true;
+
+    // Check 1: sops installation
+    print!("1. Checking if 'sops' is installed... ");
+    match check_binary("sops") {
         Ok(true) => println!("✓"),
         Ok(false) => {
             println!("✗");
-            println!("   ❌ shadow-secret.yaml not found in current directory");
-            println!("   💡 Create a configuration file first");
+            println!("   ❌ 'sops' is not installed or not in PATH");
+            println!("   📦 Install from: https://github.com/getsops/sops/releases");
             all_checks_passed = false;
         }
         Err(e) => {
             println!("✗");
-            println!("   ❌ Error checking vault path: {}", e);
+            println!("   ❌ Error checking for 'sops': {}", e);
             all_checks_passed = false;
         }
+    }
+
+    // Check 2: age installation
+    print!("2. Checking if 'age' is installed... ");
+    match check_binary("age") {
+        Ok(true) => println!("✓"),
+        Ok(false) => {
+            println!("✗");
+            println!("   ❌ 'age' is not installed or not in PATH");
+            println!("   📦 Install from: https://github.com/FiloSottile/age/releases");
+            all_checks_passed = false;
+        }
+        Err(e) => {
+            println!("✗");
+            println!("   ❌ Error checking for 'age': {}", e);
+            all_checks_passed = false;
+        }
+    }
+
+    // Check 3: SOPS_AGE_KEY_FILE environment variable
+    print!("3. Checking $SOPS_AGE_KEY_FILE environment variable... ");
+    let env_var_set = match check_env_var("SOPS_AGE_KEY_FILE") {
+        Ok(true) => {
+            println!("✓");
+            true
+        }
+        Ok(false) => {
+            println!("⊘");
+            println!("   ⚠️  $SOPS_AGE_KEY_FILE is not set");
+            println!("   💡 You can either:");
+            println!("      1. Set it: export SOPS_AGE_KEY_FILE=/path/to/key.txt");
+            println!("      2. Add 'age_key_path' field to your vault config");
+            false
+        }
+        Err(e) => {
+            println!("✗");
+            println!("   ❌ Error checking environment variable: {}", e);
+            all_checks_passed = false;
+            false
+        }
+    };
+
+    // Additional check: if env var not set, check if age_key_path is in config
+    if !env_var_set {
+        // Check if global.yaml or shadow-secret.yaml has age_key_path
+        let config_path = if Path::new("shadow-secret.yaml").exists() {
+            "shadow-secret.yaml"
+        } else {
+            "~/.config/shadow-secret/global.yaml"
+        };
+
+        print!("   Checking if 'age_key_path' is in config... ");
+        match check_file_exists(config_path) {
+            Ok(true) => {
+                // Try to read and parse config to check for age_key_path field
+                if let Ok(content) = std::fs::read_to_string(config_path) {
+                    if content.contains("age_key_path:") {
+                        println!("✓");
+                        println!("   ℹ️  Config has 'age_key_path' field");
+                    } else {
+                        println!("⊘");
+                        println!("   ⚠️  Config does not have 'age_key_path' field");
+                        println!("   💡 Add it to your vault config:");
+                        println!("      vault:");
+                        println!("        age_key_path: \"/path/to/your/keys.txt\"");
+                    }
+                } else {
+                    println!("⊘");
+                    println!("   ⚠️  Could not read config file");
+                }
+            }
+            Ok(false) => {
+                println!("⊘");
+                println!("   ℹ️  No config file found to check");
+            }
+            Err(e) => {
+                println!("⊘");
+                println!("   ⚠️  Could not check config file: {}", e);
+            }
+        }
+    }
+
+    // Check 4: SOPS_AGE_KEY_FILE file existence
+    print!("4. Checking if $SOPS_AGE_KEY_FILE file exists... ");
+    if let Ok(key_file) = std::env::var("SOPS_AGE_KEY_FILE") {
+        match check_file_exists(&key_file) {
+            Ok(true) => println!("✓"),
+            Ok(false) => {
+                println!("✗");
+                println!("   ❌ File not found: {}", key_file);
+                println!("   💡 Verify the path is correct");
+                all_checks_passed = false;
+            }
+            Err(e) => {
+                println!("✗");
+                println!("   ❌ Error checking file: {}", e);
+                all_checks_passed = false;
+            }
+        }
+    } else {
+        println!("⊘");
+        println!("   ⚠️  Skipped (environment variable not set)");
+    }
+
+    // Check 5: Vault source path accessibility
+    print!("5. Checking vault source path accessibility... ");
+
+    // Check if we're in global mode or project mode
+    let project_config_exists = check_file_exists("shadow-secret.yaml")?;
+
+    let global_config_path = dirs::home_dir()
+        .map(|home| home.join(".config/shadow-secret/global.yaml"));
+
+    let global_config_exists = if let Some(ref path) = global_config_path {
+        check_file_exists(path.to_str().unwrap_or(""))?
+    } else {
+        false
+    };
+
+    if project_config_exists {
+        println!("✓");
+        println!("   ℹ️  Project config found: shadow-secret.yaml");
+    } else if global_config_exists {
+        println!("✓");
+        println!("   ℹ️  Global config found: ~/.config/shadow-secret/global.yaml");
+        println!("   💡 Use 'shadow-secret unlock-global' for global secrets");
+    } else {
+        println!("✗");
+        println!("   ❌ No configuration found");
+        println!("   💡 Create one of:");
+        println!("      1. Project: shadow-secret.yaml in current directory");
+        println!("      2. Global: ~/.config/shadow-secret/global.yaml");
+        println!("   💡 Run 'shadow-secret init-global' to create global config");
+        all_checks_passed = false;
     }
 
     println!();
@@ -444,9 +593,35 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Doctor => {
-            if let Err(e) = run_doctor() {
-                eprintln!("\nError: {}", e);
-                std::process::exit(1);
+            // Smart doctor: auto-detect if we should check global config
+            let project_config_exists = Path::new("shadow-secret.yaml").exists();
+
+            let global_config_path = dirs::home_dir()
+                .map(|home| home.join(".config/shadow-secret/global.yaml"));
+
+            let global_config_exists = if let Some(ref path) = global_config_path {
+                path.exists()
+            } else {
+                false
+            };
+
+            // If only global config exists, provide helpful hint
+            if !project_config_exists && global_config_exists {
+                println!("🔍 Shadow Secret Doctor");
+                println!("Checking prerequisites...\n");
+                println!("ℹ️  No project config found (shadow-secret.yaml)");
+                println!("ℹ️  Global config detected: ~/.config/shadow-secret/global.yaml");
+                println!("\n💡 Use 'shadow-secret unlock-global' for global secrets");
+                println!("💡 Or create a project config with 'shadow-secret init-project'");
+
+                // Run basic checks (sops, age, SOPS_AGE_KEY_FILE)
+                run_basic_checks()?;
+            } else {
+                // Normal doctor for project mode
+                if let Err(e) = run_doctor() {
+                    eprintln!("\nError: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
         Commands::Unlock { config } => {
