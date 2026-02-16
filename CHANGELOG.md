@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2025-02-16
+
+### Changed
+
+- **GitHub Actions**: Improved CI and Coverage workflows
+  - Consolidated cargo caching with better key structure
+  - Added `fail-fast: false` to matrix strategies
+  - Improved artifact handling with `if-no-files-found: warn`
+  - Better error handling for coverage uploads
+
+### Fixed
+
+- CI workflow now uses consolidated caching
+- Coverage workflow now handles upload failures gracefully
+
 ## [0.4.2] - 2025-02-16
 
 ### Fixed

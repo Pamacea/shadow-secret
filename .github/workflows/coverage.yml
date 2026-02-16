@@ -41,10 +41,12 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           files: packages/core/lcov.info
-          fail_ci_if_error: true
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload coverage HTML
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: packages/core/target/llvm-cov/html
+          if-no-files-found: warn
