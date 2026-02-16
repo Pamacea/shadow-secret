@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2025-02-16
+
+### Fixed
+
+- **GitHub Actions**: Fixed NPM publish workflow
+  - Corrected artifact download paths with `merge-multiple: false`
+  - Added Node.js setup step before publishing
+  - Added binary verification step
+  - Proper chmod for all platform binaries
+  - Updated softprops/action-gh-release to v2
+
+### Changed
+
+- **Publish workflow**: More robust artifact handling
+  - Uses `pattern: binary-*` for artifact download
+  - Better error handling with `if-no-files-found: error`
+  - Added `fail-fast: false` to matrix strategy
+
 ## [0.4.1] - 2025-02-16
 
 ### Fixed
