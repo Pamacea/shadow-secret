@@ -9,8 +9,9 @@
  *
  * Platform support:
  * - Windows (x64): shadow-secret.exe
- * - Linux (x64): shadow-secret (TODO: Add via CI/CD)
- * - macOS (x64/ARM64): shadow-secret (TODO: Add via CI/CD)
+ * - Linux (x64): shadow-secret
+ * - macOS (x64): shadow-secret-x64
+ * - macOS (ARM64): shadow-secret-arm64
  */
 
 const { spawn } = require('child_process');
@@ -19,12 +20,23 @@ const fs = require('fs');
 
 // Platform detection
 const platform = process.platform;
-const isWindows = platform === 'win32';
+const arch = process.arch;
 
-// Binary name based on platform
-// Note: For now, only Windows binary is included
-// Linux and macOS will be added in future releases via CI/CD
-const binaryName = isWindows ? 'shadow-secret.exe' : 'shadow-secret';
+// Determine binary name based on platform and architecture
+let binaryName;
+if (platform === 'win32') {
+  binaryName = 'shadow-secret.exe';
+} else if (platform === 'darwin') {
+  // macOS: Choose binary based on architecture
+  if (arch === 'arm64') {
+    binaryName = 'shadow-secret-arm64';
+  } else {
+    binaryName = 'shadow-secret-x64';
+  }
+} else {
+  // Linux and others
+  binaryName = 'shadow-secret';
+}
 
 // Resolve binary path relative to this script
 const binDir = path.resolve(__dirname, '..', 'bin');

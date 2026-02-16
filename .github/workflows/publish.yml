@@ -83,24 +83,27 @@ jobs:
       - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
-          path: packages/cli-npm/bin/
+          path: packages/cli-npm/bin/artifacts
 
-      - name: Set executable permissions
+      - name: Organize binaries and set permissions
         run: |
-          chmod +x packages/cli-npm/bin/shadow-secret
+          # Create bin directory
+          mkdir -p packages/cli-npm/bin
+
+          # Move binaries from artifacts to bin directory
+          cp packages/cli-npm/bin/artifacts/binary-windows/shadow-secret.exe packages/cli-npm/bin/ || true
+          cp packages/cli-npm/bin/artifacts/binary-linux/shadow-secret packages/cli-npm/bin/ || true
+          cp packages/cli-npm/bin/artifacts/binary-macos/shadow-secret packages/cli-npm/bin/shadow-secret-x64
+          cp packages/cli-npm/bin/artifacts/binary-macos-arm/shadow-secret packages/cli-npm/bin/shadow-secret-arm64
+
+          # Set executable permissions
+          chmod +x packages/cli-npm/bin/shadow-secret || true
           chmod +x packages/cli-npm/bin/shadow-secret.exe || true
+          chmod +x packages/cli-npm/bin/shadow-secret-x64 || true
+          chmod +x packages/cli-npm/bin/shadow-secret-arm64 || true
 
-      - name: Update bridge.js for multi-platform
-        run: |
-          cd packages/cli-npm
-          node -e "
-          const fs = require('fs');
-          const content = fs.readFileSync('lib/bridge.js', 'utf8');
-          // Remove the TODO comment about platform support
-          const updated = content.replace('TODO: Add via CI/CD', '✓ Supported');
-          fs.writeFileSync('lib/bridge.js', updated);
-          console.log('✓ Updated bridge.js for multi-platform support');
-          "
+          # Clean up artifacts directory
+          rm -rf packages/cli-npm/bin/artifacts
 
       - name: Publish to NPM
         run: |
