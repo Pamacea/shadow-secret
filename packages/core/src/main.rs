@@ -11,12 +11,13 @@ use shadow_secret::config::Config;
 use shadow_secret::vault::Vault;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Shadow Secret - A secure, distributed secret management system
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <yanis@example.com>")]
-#[command(version = "0.3.9")]
+#[command(version = "0.5.0")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -69,6 +70,13 @@ enum Commands {
         /// Dry run - show what would be pushed without actually pushing
         #[arg(long, default_value = "false")]
         dry_run: bool,
+    },
+
+    /// Update Shadow Secret to latest version from NPM
+    Update {
+        /// Check for updates without installing
+        #[arg(long, default_value = "false")]
+        check_only: bool,
     },
 }
 
@@ -595,6 +603,75 @@ fn run_push_cloud(config_path: &str, project_id: Option<String>, dry_run: bool) 
     Ok(())
 }
 
+fn get_current_version() -> Result<String> {
+    // Version from Cargo.toml
+    Ok(env!("CARGO_PKG_VERSION").to_string())
+}
+
+fn get_latest_version() -> Result<String> {
+    println!("🔍 Checking for updates on NPM...\n");
+
+    let output = Command::new("npm")
+        .args(["view", "@oalacea/shadow-secret", "version"])
+        .output()
+        .context("Failed to execute 'npm view'. Is NPM installed?")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow::anyhow!("npm view failed: {}", stderr));
+    }
+
+    let version = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .to_string();
+
+    Ok(version)
+}
+
+fn run_update(check_only: bool) -> Result<()> {
+    println!("🔄 Shadow Secret Update");
+    println!();
+
+    let current = get_current_version()?;
+    let latest = get_latest_version()?;
+
+    println!("📦 Current version: {}", current);
+    println!("📦 Latest version:  {}", latest);
+    println!();
+
+    if current == latest {
+        println!("✅ You're already on the latest version!");
+        return Ok(());
+    }
+
+    println!("🆕 A new version is available!");
+    println!();
+
+    if check_only {
+        println!("ℹ️  Run 'shadow-secret update' to install the latest version.");
+        return Ok(());
+    }
+
+    println!("📥 Installing @oalacea/shadow-secret@{}...\n", latest);
+
+    let output = Command::new("npm")
+        .args(["install", "-g", "@oalacea/shadow-secret@latest"])
+        .status()
+        .context("Failed to execute 'npm install'. Is NPM installed?")?;
+
+    if !output.success() {
+        return Err(anyhow::anyhow!("npm install failed with exit code: {:?}", output));
+    }
+
+    println!();
+    println!("✅ Successfully updated to version {}!", latest);
+    println!();
+    println!("🎉 Shadow Secret has been updated!");
+    println!("💡 Run 'shadow-secret --version' to verify the update.");
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -678,6 +755,14 @@ fn main() -> Result<()> {
                 eprintln!("\n⚠️  Failed to push secrets to Vercel.");
                 eprintln!("💡 Run 'shadow-secret doctor' to check your configuration.");
                 eprintln!("💡 Make sure Vercel CLI is installed: npm install -g vercel");
+                std::process::exit(1);
+            }
+        }
+        Commands::Update { check_only } => {
+            if let Err(e) = run_update(check_only) {
+                eprintln!("\nError: {}", e);
+                eprintln!("\n⚠️  Update failed.");
+                eprintln!("💡 You can manually update with: npm install -g @oalacea/shadow-secret@latest");
                 std::process::exit(1);
             }
         }
