@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-02-17
+
+### Fixed
+
+- **JSON/YAML injection**: Fixed placeholder replacement to preserve original formatting and key order
+  - Previously, JSON files were re-serialized with keys sorted alphabetically
+  - YAML files were also re-serialized, losing original formatting
+  - Now uses simple text replacement that preserves exact structure
+  - This fixes issues where services failed to read configuration files after injection
+  - No more "key not found" errors due to reordering
+
+### Technical Details
+
+- Removed `replace_placeholders_json()` and `replace_placeholders_yaml()` functions
+- Now uses `replace_placeholders()` for all file types (JSON, YAML, ENV)
+- This approach preserves:
+  - Key order in objects
+  - Original indentation and formatting
+  - Comments in YAML files
+  - All structural elements
+
 ## [0.5.0] - 2025-02-16
 
 ### Added

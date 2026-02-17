@@ -225,26 +225,22 @@ pub fn inject_secrets(
     let modified_content = match extension {
         "json" => {
             eprintln!("🔍 [DEBUG] Processing as JSON...");
-            match replace_placeholders_json(&content, secrets, placeholders) {
-                Ok(c) => {
-                    eprintln!("✓ [DEBUG] JSON replacement successful");
-                    c
-                }
-                Err(e) => {
-                    eprintln!("❌ [DEBUG] JSON replacement failed: {:#?}", e);
-                    return Err(e);
-                }
-            }
+            // Use simple text replacement to preserve formatting and key order
+            eprintln!("✓ [DEBUG] JSON replacement successful (preserving format)");
+            replace_placeholders(&content, secrets, placeholders)
         }
-        "yaml" | "yml" => replace_placeholders_yaml(&content, secrets, placeholders)
-            .with_context(|| format!("Failed to replace placeholders in YAML file: {}", file_path.display()))?,
+        "yaml" | "yml" => {
+            eprintln!("🔍 [DEBUG] Processing as YAML...");
+            // Use simple text replacement to preserve formatting and key order
+            eprintln!("✓ [DEBUG] YAML replacement successful (preserving format)");
+            replace_placeholders(&content, secrets, placeholders)
+        }
         "env" | "dotenv" => replace_placeholders(&content, secrets, placeholders),
         _ => {
             // Try to auto-detect format
             if content.trim_start().starts_with('{') {
-                // JSON-like
-                replace_placeholders_json(&content, secrets, placeholders)
-                    .with_context(|| "Failed to replace placeholders in auto-detected JSON")?
+                // JSON-like - use simple replacement to preserve format
+                replace_placeholders(&content, secrets, placeholders)
             } else {
                 // Default to simple replacement
                 replace_placeholders(&content, secrets, placeholders)
@@ -322,137 +318,10 @@ pub fn replace_placeholders(
     result
 }
 
-/// Replace placeholders in JSON content while preserving structure.
-///
-/// # Arguments
-///
-/// * `content` - JSON content as string
-/// * `secrets` - Map of secret keys to values
-/// * `placeholders` - List of placeholders to replace
-///
-/// # Returns
-///
-/// Modified JSON content with string values replaced.
-fn replace_placeholders_json(
-    content: &str,
-    secrets: &HashMap<String, String>,
-    placeholders: &[String],
-) -> Result<String> {
-    // Strip UTF-8 BOM if present (EF BB BF)
-    let content = content.strip_prefix('\u{FEFF}').unwrap_or(content);
-
-    // Parse JSON to preserve structure
-    let mut json: serde_json::Value =
-        serde_json::from_str(content).context("Failed to parse JSON content")?;
-
-    // Recursively replace placeholders in string values
-    replace_in_json_value(&mut json, secrets, placeholders)?;
-
-    // Serialize back to JSON with pretty printing (4 spaces)
-    let modified_content = serde_json::to_string_pretty(&json)
-        .context("Failed to serialize modified JSON content")?;
-
-    Ok(modified_content)
-}
-
-/// Recursively replace placeholders in JSON values.
-fn replace_in_json_value(
-    value: &mut serde_json::Value,
-    secrets: &HashMap<String, String>,
-    placeholders: &[String],
-) -> Result<()> {
-    match value {
-        serde_json::Value::String(s) => {
-            // Replace placeholders in string values
-            *s = replace_placeholders(s, secrets, placeholders);
-            Ok(())
-        }
-        serde_json::Value::Array(arr) => {
-            // Recursively process array elements
-            for item in arr.iter_mut() {
-                replace_in_json_value(item, secrets, placeholders)?;
-            }
-            Ok(())
-        }
-        serde_json::Value::Object(obj) => {
-            // Recursively process object values
-            for (_key, value) in obj.iter_mut() {
-                replace_in_json_value(value, secrets, placeholders)?;
-            }
-            Ok(())
-        }
-        _ => Ok(()), // Numbers, booleans, null remain unchanged
-    }
-}
-
 /// Replace placeholders in YAML content while preserving structure.
 ///
 /// # Arguments
 ///
-/// * `content` - YAML content as string
-/// * `secrets` - Map of secret keys to values
-/// * `placeholders` - List of placeholders to replace
-///
-/// # Returns
-///
-/// Modified YAML content with string values replaced.
-fn replace_placeholders_yaml(
-    content: &str,
-    secrets: &HashMap<String, String>,
-    placeholders: &[String],
-) -> Result<String> {
-    // Strip UTF-8 BOM if present (EF BB BF)
-    let content = content.strip_prefix('\u{FEFF}').unwrap_or(content);
-
-    // Parse YAML to preserve structure
-    let yaml: serde_yaml::Value =
-        serde_yaml::from_str(content).context("Failed to parse YAML content")?;
-
-    // Recursively replace placeholders in string values
-    let modified_yaml = replace_in_yaml_value(yaml, secrets, placeholders)?;
-
-    // Serialize back to YAML
-    let modified_content = serde_yaml::to_string(&modified_yaml)
-        .context("Failed to serialize modified YAML content")?;
-
-    Ok(modified_content)
-}
-
-/// Recursively replace placeholders in YAML values.
-fn replace_in_yaml_value(
-    value: serde_yaml::Value,
-    secrets: &HashMap<String, String>,
-    placeholders: &[String],
-) -> Result<serde_yaml::Value> {
-    match value {
-        serde_yaml::Value::String(s) => {
-            // Replace placeholders in string values
-            Ok(serde_yaml::Value::String(replace_placeholders(
-                &s, secrets, placeholders,
-            )))
-        }
-        serde_yaml::Value::Sequence(arr) => {
-            // Recursively process sequence elements
-            let mut modified_arr = Vec::new();
-            for item in arr.into_iter() {
-                modified_arr.push(replace_in_yaml_value(item, secrets, placeholders)?);
-            }
-            Ok(serde_yaml::Value::Sequence(modified_arr))
-        }
-        serde_yaml::Value::Mapping(map) => {
-            // Recursively process mapping values
-            let mut modified_map = serde_yaml::Mapping::new();
-            for (key, value) in map.into_iter() {
-                let modified_key = replace_in_yaml_value(key, secrets, placeholders)?;
-                let modified_value = replace_in_yaml_value(value, secrets, placeholders)?;
-                modified_map.insert(modified_key, modified_value);
-            }
-            Ok(serde_yaml::Value::Mapping(modified_map))
-        }
-        _ => Ok(value), // Numbers, booleans, null remain unchanged
-    }
-}
-
 /// Extract key name from placeholder.
 ///
 /// Supports:
@@ -551,28 +420,79 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_placeholders_json_simple() {
-        let content = r#"{"api_key": "$API_KEY", "database": "$DATABASE_URL"}"#;
+    fn test_inject_secrets_json_file_preserves_formatting() {
+        // Test that JSON file formatting and key order are preserved
+        let content = r#"{
+  "zebra": 1,
+  "alpha": {
+    "zebra": "$API_KEY",
+    "alpha": "$DATABASE_URL"
+  }
+}"#;
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
         secrets.insert("DATABASE_URL".to_string(), "postgres://localhost".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$DATABASE_URL".to_string()];
-        let result = replace_placeholders_json(content, &secrets, &placeholders).unwrap();
 
-        assert!(result.contains("sk_live_12345"));
-        assert!(result.contains("postgres://localhost"));
-        assert!(!result.contains("$API_KEY"));
-        assert!(!result.contains("$DATABASE_URL"));
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
 
-        // Verify it's valid JSON
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["api_key"], "sk_live_12345");
-        assert_eq!(parsed["database"], "postgres://localhost");
+        // Verify file was modified
+        let modified_content = fs::read_to_string(temp_file.path()).unwrap();
+
+        // Key order should be preserved (zebra before alpha)
+        assert!(modified_content.contains("\"zebra\""));
+        assert!(modified_content.contains("\"alpha\""));
+        let zebra_pos = modified_content.find("\"zebra\"").unwrap();
+        let alpha_pos = modified_content.find("\"alpha\"").unwrap();
+        assert!(zebra_pos < alpha_pos, "Key order should be preserved");
+
+        // Secrets should be replaced
+        assert!(modified_content.contains("sk_live_12345"));
+        assert!(modified_content.contains("postgres://localhost"));
+        assert!(!modified_content.contains("$API_KEY"));
+        assert!(!modified_content.contains("$DATABASE_URL"));
+
+        // JSON should still be valid
+        let parsed: serde_json::Value = serde_json::from_str(&modified_content).unwrap();
+        assert_eq!(parsed["zebra"], 1);
+        assert_eq!(parsed["alpha"]["zebra"], "sk_live_12345");
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
-    fn test_replace_placeholders_json_nested() {
+    fn test_inject_secrets_json_simple() {
+        let content = r#"{"api_key": "$API_KEY", "database": "$DATABASE_URL"}"#;
+        let temp_file = create_temp_file(content);
+
+        let mut secrets = HashMap::new();
+        secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
+        secrets.insert("DATABASE_URL".to_string(), "postgres://localhost".to_string());
+
+        let placeholders = vec!["$API_KEY".to_string(), "$DATABASE_URL".to_string()];
+
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
+
+        // Verify file was modified
+        let modified_content = fs::read_to_string(temp_file.path()).unwrap();
+        assert!(modified_content.contains("sk_live_12345"));
+        assert!(modified_content.contains("postgres://localhost"));
+
+        // Verify JSON is still valid
+        let parsed: serde_json::Value = serde_json::from_str(&modified_content).unwrap();
+        assert_eq!(parsed["api_key"], "sk_live_12345");
+        assert_eq!(parsed["database"], "postgres://localhost");
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
+    }
+
+    #[test]
+    fn test_inject_secrets_json_nested() {
         let content = r#"{
   "service": {
     "api_key": "$API_KEY",
@@ -581,49 +501,46 @@ mod tests {
     }
   }
 }"#;
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
         secrets.insert("PROD_URL".to_string(), "https://api.example.com".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$PROD_URL".to_string()];
-        let result = replace_placeholders_json(content, &secrets, &placeholders).unwrap();
 
-        assert!(result.contains("sk_live_12345"));
-        assert!(result.contains("https://api.example.com"));
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
 
-        // Verify it's valid JSON
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        // Verify file was modified
+        let modified_content = fs::read_to_string(temp_file.path()).unwrap();
+        assert!(modified_content.contains("sk_live_12345"));
+        assert!(modified_content.contains("https://api.example.com"));
+
+        // Verify JSON is still valid
+        let parsed: serde_json::Value = serde_json::from_str(&modified_content).unwrap();
         assert_eq!(parsed["service"]["api_key"], "sk_live_12345");
         assert_eq!(
             parsed["service"]["endpoints"]["production"],
             "https://api.example.com"
         );
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
-    fn test_replace_placeholders_json_preserves_numbers() {
-        let content = r#"{"port": 8080, "timeout": 30.5, "enabled": true}"#;
-        let secrets = HashMap::new();
-        let placeholders = vec!["$NONEXISTENT".to_string()];
-
-        let result = replace_placeholders_json(content, &secrets, &placeholders).unwrap();
-
-        // Verify numbers and booleans are preserved
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed["port"], 8080);
-        assert_eq!(parsed["timeout"], 30.5);
-        assert_eq!(parsed["enabled"], true);
-    }
-
-    #[test]
-    fn test_replace_placeholders_yaml_simple() {
+    fn test_inject_secrets_yaml_simple() {
         let content = "api_key: $API_KEY\ndatabase_url: $DATABASE_URL";
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
         secrets.insert("DATABASE_URL".to_string(), "postgres://localhost".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$DATABASE_URL".to_string()];
-        let result = replace_placeholders_yaml(content, &secrets, &placeholders).unwrap();
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
+
+        let result = std::fs::read_to_string(temp_file.path()).unwrap();
 
         assert!(result.contains("sk_live_12345"));
         assert!(result.contains("postgres://localhost"));
@@ -634,21 +551,27 @@ mod tests {
         let parsed: serde_yaml::Value = serde_yaml::from_str(&result).unwrap();
         assert_eq!(parsed["api_key"], "sk_live_12345");
         assert_eq!(parsed["database_url"], "postgres://localhost");
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
-    fn test_replace_placeholders_yaml_nested() {
+    fn test_inject_secrets_yaml_nested() {
         let content = r#"service:
   api_key: $API_KEY
   endpoints:
     production: $PROD_URL"#;
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
         secrets.insert("PROD_URL".to_string(), "https://api.example.com".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$PROD_URL".to_string()];
-        let result = replace_placeholders_yaml(content, &secrets, &placeholders).unwrap();
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
 
+        let result = std::fs::read_to_string(temp_file.path()).unwrap();
         assert!(result.contains("sk_live_12345"));
         assert!(result.contains("https://api.example.com"));
 
@@ -659,6 +582,9 @@ mod tests {
             parsed["service"]["endpoints"]["production"],
             "https://api.example.com"
         );
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
@@ -777,22 +703,34 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_placeholders_preserves_formatting() {
+    fn test_inject_secrets_preserves_formatting() {
         let content = r#"{
   "api_key": "$API_KEY",
   "database": "$DATABASE_URL"
 }"#;
+        let temp_file = create_temp_file(content);
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "sk_live_12345".to_string());
         secrets.insert("DATABASE_URL".to_string(), "postgres://localhost".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$DATABASE_URL".to_string()];
-        let result = replace_placeholders_json(content, &secrets, &placeholders).unwrap();
 
-        // Verify formatting is preserved (pretty printed with 2 spaces)
-        assert!(result.contains("\n  "));
-        assert!(result.contains("sk_live_12345"));
-        assert!(result.contains("postgres://localhost"));
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
+
+        // Verify file was modified
+        let modified_content = fs::read_to_string(temp_file.path()).unwrap();
+
+        // Verify formatting is preserved (same as original with values replaced)
+        assert!(modified_content.contains("\n  "));
+        assert!(modified_content.contains("sk_live_12345"));
+        assert!(modified_content.contains("postgres://localhost"));
+
+        // The structure should be exactly the same, only values changed
+        assert!(modified_content.starts_with("{\n"));
+        assert!(modified_content.ends_with("\n}"));
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
@@ -823,38 +761,51 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_placeholders_json_array() {
+    fn test_inject_secrets_json_array() {
         let content = r#"{"keys": ["$API_KEY", "$SECRET_KEY"]}"#;
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "key1".to_string());
         secrets.insert("SECRET_KEY".to_string(), "key2".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$SECRET_KEY".to_string()];
-        let result = replace_placeholders_json(content, &secrets, &placeholders).unwrap();
+
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
 
         // Verify it's valid JSON and values were replaced
-        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        let modified_content = fs::read_to_string(temp_file.path()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&modified_content).unwrap();
         let keys = parsed["keys"].as_array().unwrap();
         assert_eq!(keys[0], "key1");
         assert_eq!(keys[1], "key2");
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 
     #[test]
-    fn test_replace_placeholders_yaml_sequence() {
+    fn test_inject_secrets_yaml_sequence() {
         let content = r#"keys:
   - $API_KEY
   - $SECRET_KEY"#;
+        let temp_file = create_temp_file(content);
+
         let mut secrets = HashMap::new();
         secrets.insert("API_KEY".to_string(), "key1".to_string());
         secrets.insert("SECRET_KEY".to_string(), "key2".to_string());
 
         let placeholders = vec!["$API_KEY".to_string(), "$SECRET_KEY".to_string()];
-        let result = replace_placeholders_yaml(content, &secrets, &placeholders).unwrap();
+        let backup = inject_secrets(temp_file.path(), &secrets, &placeholders).unwrap();
 
         // Verify it's valid YAML and values were replaced
-        let parsed: serde_yaml::Value = serde_yaml::from_str(&result).unwrap();
+        let modified_content = std::fs::read_to_string(temp_file.path()).unwrap();
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&modified_content).unwrap();
         let keys = parsed["keys"].as_sequence().unwrap();
         assert_eq!(keys[0], "key1");
         assert_eq!(keys[1], "key2");
+
+        // Restore backup to clean up
+        backup.restore().unwrap();
     }
 }
