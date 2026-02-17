@@ -209,7 +209,8 @@ fn test_create_sops_config_with_public_key() {
 
     assert!(content.contains(&format!("age: \"{}\"", public_key)));
     assert!(content.contains("creation_rules:"));
-    assert!(content.contains("path_regex: \\.enc\\.env$") || content.contains(r"path_regex: \.enc\.env$"));
+    // In raw string r#"..."#, backslashes are literal, so the content contains \.enc\.env
+    assert!(content.contains(r"path_regex: .*\.enc\.env$"));
 }
 
 #[test]

@@ -17,7 +17,7 @@ use std::process::Command;
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <yanis@example.com>")]
-#[command(version = "0.5.1")]
+#[command(version = "0.5.2")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
