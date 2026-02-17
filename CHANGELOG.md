@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-02-18
+
+### Changed
+
+- **Config file naming**: Project configuration renamed from `global.yaml` to `project.yaml`
+  - Clarifies distinction between project-specific and global configurations
+  - Global config remains at `~/.config/shadow-secret/global.yaml`
+  - Project config is now `project.yaml` in project root
+
+### Fixed
+
+- **init-project**: Now correctly creates `project.yaml` configuration file
+  - Previously, the file creation was silently failing
+  - All configuration files now properly created during initialization
+
+### Changed
+
+- **Default config path**: `unlock` and `push-cloud` now default to `project.yaml`
+- **Doctor command**: Updated to check for `project.yaml` instead of `global.yaml`
+- **Config module**: Updated `from_current_dir()` to look for `project.yaml`
+- **Vercel integration**: Updated to read `vercel_project_id` from `project.yaml`
+
 ## [0.5.4] - 2026-02-18
 
 ### Fixed

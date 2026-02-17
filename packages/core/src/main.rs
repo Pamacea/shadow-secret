@@ -17,7 +17,7 @@ use std::process::Command;
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <oalacea@proton.me>")]
-#[command(version = "0.5.3")]
+#[command(version = "0.5.5")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -31,8 +31,8 @@ enum Commands {
 
     /// Unlock secrets for current project (project-specific config only)
     Unlock {
-        /// Path to the configuration file (default: global.yaml)
-        #[arg(short, long, default_value = "global.yaml")]
+        /// Path to the configuration file (default: project.yaml)
+        #[arg(short, long, default_value = "project.yaml")]
         config: String,
     },
 
@@ -59,8 +59,8 @@ enum Commands {
 
     /// Push secrets from local .enc.env to Vercel cloud
     PushCloud {
-        /// Path to the configuration file (default: global.yaml)
-        #[arg(short, long, default_value = "global.yaml")]
+        /// Path to the configuration file (default: project.yaml)
+        #[arg(short, long, default_value = "project.yaml")]
         config: String,
 
         /// Override Vercel project ID (auto-detected if not specified)
@@ -249,9 +249,9 @@ fn run_doctor() -> Result<()> {
 
     // Additional check: if env var not set, check if age_key_path is in config
     if !env_var_set {
-        // Check if global.yaml or global.yaml has age_key_path
-        let config_path = if Path::new("global.yaml").exists() {
-            "global.yaml"
+        // Check if project.yaml or global config has age_key_path
+        let config_path = if Path::new("project.yaml").exists() {
+            "project.yaml"
         } else {
             "~/.config/shadow-secret/global.yaml"
         };
@@ -313,7 +313,7 @@ fn run_doctor() -> Result<()> {
     print!("5. Checking vault source path accessibility... ");
 
     // Check if we're in global mode or project mode
-    let project_config_exists = check_file_exists("global.yaml")?;
+    let project_config_exists = check_file_exists("project.yaml")?;
 
     let global_config_path = dirs::home_dir()
         .map(|home| home.join(".config/shadow-secret/global.yaml"));
@@ -326,7 +326,7 @@ fn run_doctor() -> Result<()> {
 
     if project_config_exists {
         println!("✓");
-        println!("   ℹ️  Project config found: global.yaml");
+        println!("   ℹ️  Project config found: project.yaml");
     } else if global_config_exists {
         println!("✓");
         println!("   ℹ️  Global config found: ~/.config/shadow-secret/global.yaml");
@@ -335,8 +335,8 @@ fn run_doctor() -> Result<()> {
         println!("✗");
         println!("   ❌ No configuration found");
         println!("   💡 Create one of:");
-        println!("      1. Project: global.yaml in current directory");
-        println!("      2. Global: ~/.config/shadow-secret/global.yaml");
+        println!("      1. Project: project.yaml in current directory (run 'shadow-secret init-project')");
+        println!("      2. Global: ~/.config/shadow-secret/global.yaml (run 'shadow-secret init-global')");
         println!("   💡 Run 'shadow-secret init-global' to create global config");
         all_checks_passed = false;
     }
@@ -678,7 +678,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Doctor => {
             // Smart doctor: auto-detect if we should check global config
-            let project_config_exists = Path::new("global.yaml").exists();
+            let project_config_exists = Path::new("project.yaml").exists();
 
             let global_config_path = dirs::home_dir()
                 .map(|home| home.join(".config/shadow-secret/global.yaml"));
@@ -693,7 +693,7 @@ fn main() -> Result<()> {
             if !project_config_exists && global_config_exists {
                 println!("🔍 Shadow Secret Doctor");
                 println!("Checking prerequisites...\n");
-                println!("ℹ️  No project config found (global.yaml)");
+                println!("ℹ️  No project config found (project.yaml)");
                 println!("ℹ️  Global config detected: ~/.config/shadow-secret/global.yaml");
                 println!("\n💡 Use 'shadow-secret unlock-global' for global secrets");
                 println!("💡 Or create a project config with 'shadow-secret init-project'");

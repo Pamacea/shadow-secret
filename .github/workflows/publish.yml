@@ -87,20 +87,37 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Download all binaries
+      - name: Create bin directory
+        run: mkdir -p packages/cli-npm/bin
+
+      - name: Download Windows binary
         uses: actions/download-artifact@v4
         with:
-          path: packages/cli-npm/bin
-          pattern: binary-*
-          merge-multiple: false
+          name: binary-windows
+          path: packages/cli-npm/bin/shadow-secret.exe
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-linux
+          path: packages/cli-npm/bin/shadow-secret
+
+      - name: Download macOS x64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-macos-x64
+          path: packages/cli-npm/bin/shadow-secret-x64
+
+      - name: Download macOS ARM64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-macos-arm64
+          path: packages/cli-npm/bin/shadow-secret-arm64
 
       - name: Set executable permissions
         working-directory: packages/cli-npm/bin
         run: |
-          chmod +x shadow-secret || true
-          chmod +x shadow-secret.exe || true
-          chmod +x shadow-secret-x64 || true
-          chmod +x shadow-secret-arm64 || true
+          chmod +x shadow-secret shadow-secret-x64 shadow-secret-arm64 || true
 
       - name: Verify binaries
         working-directory: packages/cli-npm
@@ -130,7 +147,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: packages/cli-npm/oalacea-shadow-secret-*.tgz
+          files: packages/cli-npm/bin/*
           draft: false
           generate_release_notes: true
         env:
