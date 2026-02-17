@@ -39,9 +39,9 @@ fn create_test_enc_env(temp_dir: &PathBuf, secrets: &HashMap<&str, &str>) -> Pat
     }
 }
 
-/// Test helper to create shadow-secret.yaml config
+/// Test helper to create global.yaml config
 fn create_test_config(temp_dir: &PathBuf, vault_path: &str) -> PathBuf {
-    let config_path = temp_dir.join("shadow-secret.yaml");
+    let config_path = temp_dir.join("global.yaml");
 
     let content = format!(
         r#"vault:

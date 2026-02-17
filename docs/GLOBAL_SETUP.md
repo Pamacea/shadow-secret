@@ -248,7 +248,7 @@ shadow-secret unlock-global
 shadow-secret unlock
 ```
 
-**Loads:** `shadow-secret.yaml` from current directory
+**Loads:** `global.yaml` from current directory
 
 **Falls back to:** Nothing (use `unlock-global` for global secrets)
 
@@ -564,7 +564,7 @@ shadow-secret unlock-global  # Explicit global unlock
 
 ### Q: Can I use both project and global vaults on encrypted drives?
 
-**A:** Yes. Project vaults use `shadow-secret.yaml`, global uses `~/.config/shadow-secret/global.yaml`. Both can have `vault_path` pointing to different encrypted drives.
+**A:** Yes. Project vaults use `global.yaml`, global uses `~/.config/shadow-secret/global.yaml`. Both can have `vault_path` pointing to different encrypted drives.
 
 ### Q: What happens if encrypted drive is not mounted?
 

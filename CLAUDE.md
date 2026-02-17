@@ -29,7 +29,7 @@ shadow-secret/
 │   │   ├── src/           # Source code
 │   │   ├── tests/         # Integration tests
 │   │   ├── Cargo.toml     # Rust dependencies
-│   │   └── shadow-secret.yaml  # Config template
+│   │   └── global.yaml  # Config template
 │   └── cli-npm/           # NPM wrapper (distribution)
 │       ├── bin/           # Compiled binaries (gitignored)
 │       ├── lib/           # bridge.js (OS detection + spawning)
@@ -172,7 +172,7 @@ Check prerequisites and system configuration.
 - `age` installation
 - `SOPS_AGE_KEY_FILE` environment variable
 - Master key file existence
-- `shadow-secret.yaml` accessibility
+- `global.yaml` accessibility
 
 ### `unlock`
 

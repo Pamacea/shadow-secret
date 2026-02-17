@@ -66,7 +66,7 @@ targets:
       - "$DATABASE_URL"
 "#;
 
-        let config_path = temp_path.join("shadow-secret.yaml");
+        let config_path = temp_path.join("global.yaml");
         fs::write(&config_path, config_content).unwrap();
 
         // Step 2: Create mock SOPS encrypted file
@@ -138,7 +138,7 @@ targets:
 
     #[test]
     fn test_unlock_command_default_config_path() {
-        // Test that unlock command defaults to shadow-secret.yaml
+        // Test that unlock command defaults to global.yaml
         let temp_dir = tempfile::tempdir().unwrap();
         let temp_path = temp_dir.path();
 
@@ -154,14 +154,14 @@ targets:
       - "$VAR"
 "#;
 
-        let default_config = temp_path.join("shadow-secret.yaml");
+        let default_config = temp_path.join("global.yaml");
         fs::write(&default_config, config_content).unwrap();
 
         // Change to temp directory
         let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(temp_path).unwrap();
 
-        // Command should find shadow-secret.yaml by default
+        // Command should find global.yaml by default
         let mut cmd = assert_cmd::cargo_bin_cmd!("shadow-secret");
         cmd.arg("unlock")
             .timeout(std::time::Duration::from_secs(1))

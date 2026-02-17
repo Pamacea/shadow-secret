@@ -297,7 +297,7 @@ async fn add_vercel_env_var(key: &str, value: &str) -> Result<()> {
 /// # Detection Order
 ///
 /// 1. `.vercel/project.json` (Vercel CLI link)
-/// 2. `vercel_project_id` in local `shadow-secret.yaml`
+/// 2. `vercel_project_id` in local `global.yaml`
 /// 3. `vercel_project_id` in global config
 ///
 /// # Returns
@@ -309,7 +309,7 @@ pub fn detect_project_id() -> Result<Option<String>> {
         return Ok(Some(id));
     }
 
-    // Try local shadow-secret.yaml
+    // Try local global.yaml
     if let Some(id) = try_read_shadow_secret_yaml()? {
         return Ok(Some(id));
     }
@@ -346,11 +346,11 @@ fn try_read_vercel_project_json() -> Result<Option<String>> {
     Ok(Some(project.id))
 }
 
-/// Try to read project ID from local `shadow-secret.yaml`.
+/// Try to read project ID from local `global.yaml`.
 fn try_read_shadow_secret_yaml() -> Result<Option<String>> {
     use std::path::Path;
 
-    let path = Path::new("shadow-secret.yaml");
+    let path = Path::new("global.yaml");
 
     if !path.exists() {
         return Ok(None);
@@ -362,10 +362,10 @@ fn try_read_shadow_secret_yaml() -> Result<Option<String>> {
     }
 
     let content = std::fs::read_to_string(path)
-        .context("Failed to read shadow-secret.yaml")?;
+        .context("Failed to read global.yaml")?;
 
     let config: Config = serde_yaml::from_str(&content)
-        .context("Failed to parse shadow-secret.yaml")?;
+        .context("Failed to parse global.yaml")?;
 
     Ok(config.vercel_project_id)
 }

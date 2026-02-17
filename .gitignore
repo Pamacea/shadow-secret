@@ -19,8 +19,7 @@ packages/cli-npm/bin/shadow-secret-*
 .DS_Store
 Thumbs.db
 
-# Configuration (don't commit user config!)
-shadow-secret.yaml
+# Configuration (don't commit user config!)global.yaml
 .env
 
 # Vault data (NEVER commit secrets!)

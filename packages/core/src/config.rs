@@ -1,6 +1,6 @@
 // Shadow Secret Configuration Module
 //
-// This module handles loading and parsing the configuration from shadow-secret.yaml
+// This module handles loading and parsing the configuration from global.yaml
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -69,11 +69,11 @@ impl Config {
         Ok(config)
     }
 
-    /// Load configuration from shadow-secret.yaml in the current directory
+    /// Load configuration from global.yaml in the current directory
     /// Falls back to global config if not found
     pub fn from_current_dir() -> Result<Self> {
         // Try project-specific config first
-        let project_config = PathBuf::from("shadow-secret.yaml");
+        let project_config = PathBuf::from("global.yaml");
         if project_config.exists() {
             return Self::from_file(&project_config);
         }
@@ -91,7 +91,7 @@ impl Config {
         anyhow::bail!(
             "No Shadow Secret configuration found.\n\
             Create one of:\n\
-            1. Project-specific: shadow-secret.yaml (in current directory)\n\
+            1. Project-specific: global.yaml (in current directory)\n\
             2. Global: ~/.config/shadow-secret/global.yaml\n\
             \n\
             Run 'shadow-secret init-global' to create a global configuration."

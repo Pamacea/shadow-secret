@@ -213,9 +213,9 @@ DATABASE_URL=PLACEHOLDER
     Ok(enc_env_path)
 }
 
-/// Create shadow-secret.yaml configuration file for the project.
+/// Create global.yaml configuration file for the project.
 pub fn create_project_config(project_dir: &Path, age_key_path: &Path) -> Result<PathBuf> {
-    let config_path = project_dir.join("shadow-secret.yaml");
+    let config_path = project_dir.join("global.yaml");
 
     let config_content = format!(
         r#"# Shadow Secret Project Configuration
@@ -278,7 +278,7 @@ targets:
     );
 
     fs::write(&config_path, config_content)
-        .with_context(|| format!("Failed to write shadow-secret.yaml to: {:?}", config_path))?;
+        .with_context(|| format!("Failed to write global.yaml to: {:?}", config_path))?;
 
     Ok(config_path)
 }
@@ -346,17 +346,18 @@ pub fn encrypt_enc_env(enc_env_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Add project to global shadow-secret.yaml configuration.
+/// Add project to global configuration.
+///
+/// This adds the project as a target in the global.yaml file,
+/// allowing global secrets to be injected into project files.
 pub fn add_to_global_config(project_dir: &Path) -> Result<()> {
-    let home = dirs::home_dir()
-        .context("Failed to determine home directory")?;
-
-    let global_config_path = home.join(".shadow-secret.yaml");
+    let global_config_path = get_global_config_dir()?
+        .join("global.yaml");
 
     // Check if global config exists
     if !global_config_path.exists() {
         println!("⚠️  Global config not found at: {:?}", global_config_path);
-        println!("💡 Run 'shadow-secret init' first to create global config");
+        println!("💡 Run 'shadow-secret init-global' first to create global config");
         return Ok(());
     }
 
@@ -613,7 +614,7 @@ targets:
 #   5. Example: vault_path: "~/encrypted-drive/global.enc.env" (Linux)
 #
 # For project-specific usage:
-#    - Create shadow-secret.yaml in your project
+#    - Create global.yaml in your project
 #    - Set vault.source to point to this global.enc.env
 #    - Define your project-specific targets
 "#,
@@ -639,7 +640,7 @@ targets:
     println!("   1. Add secrets to global.enc.env:");
     println!("      sops --encrypt {:?} < {:?}.tmp", global_enc_env, global_enc_env);
     println!("   2. Use in any project:");
-    println!("      - Create shadow-secret.yaml in your project");
+    println!("      - Create global.yaml in your project");
     println!("      - Set vault.source to point to this global.enc.env");
     println!("      - Define your project targets");
     println!("   3. Run: shadow-secret unlock");
@@ -701,7 +702,7 @@ pub fn init_project(config: InitConfig) -> Result<()> {
     encrypt_enc_env(&enc_env_path)?;
     println!();
 
-    // Step 5: Create shadow-secret.yaml configuration
+    // Step 5: Create global.yaml configuration
     println!("📝 Step 5: Project Configuration");
     let project_config_path = create_project_config(&project_dir, &config.master_key_path)?;
     println!("   ✓ Created: {:?}\n", project_config_path);
@@ -709,7 +710,7 @@ pub fn init_project(config: InitConfig) -> Result<()> {
     // Step 6: Optional global config
     if config.prompt_global {
         println!("📝 Step 6: Global Configuration");
-        print!("   Add this project to global shadow-secret.yaml? [Y/n]: ");
+        print!("   Add this project to global global.yaml? [Y/n]: ");
         use std::io::Write;
         std::io::stdout().flush()?;
 
@@ -728,7 +729,7 @@ pub fn init_project(config: InitConfig) -> Result<()> {
     println!("✅ Project initialized successfully!");
     println!();
     println!("Next steps:");
-    println!("  1. Edit shadow-secret.yaml to configure your targets");
+    println!("  1. Edit global.yaml to configure your targets");
     println!("  2. Edit .enc.env: sops --decrypt .enc.env > .env.tmp");
     println!("  3. Add secrets, then encrypt: sops --encrypt .env.tmp > .enc.env");
     println!("  4. Run: shadow-secret unlock");
@@ -835,7 +836,7 @@ AGE-SECRET-KEY-1TESTPRIVATEKEYABCDEFGHIJKLMNOPQRSTUVWXYZ
         let config_path = create_project_config(temp_dir.path(), &age_key_path).unwrap();
 
         assert!(config_path.exists());
-        assert_eq!(config_path.file_name().unwrap(), "shadow-secret.yaml");
+        assert_eq!(config_path.file_name().unwrap(), "global.yaml");
 
         let content = fs::read_to_string(&config_path).unwrap();
 

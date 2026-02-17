@@ -5,20 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-02-17
+
+### Fixed
+
+- **Global config path**: `add_to_global_config` now uses correct path `~/.config/shadow-secret/global.yaml`
+  - Previously looked for `~/.global.yaml` which doesn't match `init-global` output
+  - Error message now correctly points to `shadow-secret init-global` command
+
+### Changed
+
+- **Tests**: Updated integration tests to use correct global config directory structure
+
 ## [0.5.2] - 2026-02-17
 
 ### Fixed
 
-- **init-project**: Now creates `shadow-secret.yaml` configuration file
+- **init-project**: Now creates `global.yaml` configuration file
   - Previously, `init-project` only created `.sops.yaml` and `.enc.env`
-  - Users had to manually create `shadow-secret.yaml` before running `unlock`
+  - Users had to manually create `global.yaml` before running `unlock`
   - Now includes a template configuration with example targets
   - Configuration includes inline documentation for customization
 
 ### Changed
 
 - **init-project workflow**: Added Step 5 to create project configuration
-- **Next steps**: Updated instructions to mention editing `shadow-secret.yaml` first
+- **Next steps**: Updated instructions to mention editing `global.yaml` first
 
 ## [0.5.1] - 2026-02-17
 
@@ -111,7 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Doctor command** now auto-detects global vs project mode
-  - No longer fails with "shadow-secret.yaml not found" when using `unlock-global`
+  - No longer fails with "global.yaml not found" when using `unlock-global`
   - Suggests `unlock-global` when only global config exists
   - Added helpful hints for missing `age_key_path` field
 
@@ -184,7 +196,7 @@ If you were using `unlock` for global secrets:
 
 ### Changed
 
-- `unlock` command now automatically falls back to `~/.config/shadow-secret/global.yaml` if `shadow-secret.yaml` not found in current directory
+- `unlock` command now automatically falls back to `~/.config/shadow-secret/global.yaml` if `global.yaml` not found in current directory
 - Improved documentation with global configuration examples and usage patterns
 
 ### Fixed

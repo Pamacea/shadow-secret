@@ -1,6 +1,6 @@
 {
   "name": "@oalacea/shadow-secret",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Secure secret management for modern development workflows",
   "bin": {
     "shadow-secret": "lib/bridge.js"

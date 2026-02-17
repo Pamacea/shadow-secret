@@ -92,7 +92,7 @@ Load secrets from project-specific vault and inject into target files.
 shadow-secret unlock
 ```
 
-**Loads:** `shadow-secret.yaml` from current directory (project-specific config only)
+**Loads:** `global.yaml` from current directory (project-specific config only)
 
 **Does NOT fall back to global config.** Use `unlock-global` for global secrets.
 
@@ -224,11 +224,11 @@ targets:
 
 **Using Global Config in Projects:**
 
-Use `shadow-secret unlock-global` to explicitly load global secrets. Alternatively, create a `shadow-secret.yaml` in your project directory to use project-specific configuration.
+Use `shadow-secret unlock-global` to explicitly load global secrets. Alternatively, create a `global.yaml` in your project directory to use project-specific configuration.
 
 ### Project-Specific Configuration
 
-Create `shadow-secret.yaml` in your project root:
+Create `global.yaml` in your project root:
 
 ```yaml
 vault:
@@ -338,7 +338,7 @@ STAGING_KEY=$STAGING_API_KEY
 DEBUG=true
 ```
 
-**Configuration** (`shadow-secret.yaml`):
+**Configuration** (`global.yaml`):
 ```yaml
 targets:
   - name: "Environment"
@@ -367,7 +367,7 @@ database:
   port: 5432
 ```
 
-**Configuration** (`shadow-secret.yaml`):
+**Configuration** (`global.yaml`):
 ```yaml
 targets:
   - name: "Database Config"

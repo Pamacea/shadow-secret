@@ -51,7 +51,9 @@ impl TestEnv {
     /// Create global config file
     fn create_global_config(&self) -> PathBuf {
         let home = self.temp_dir.path();
-        let config_path = home.join(".shadow-secret.yaml");
+        let config_dir = home.join(".config").join("shadow-secret");
+        fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("global.yaml");
         let config_content = r#"vault:
   source: "test.enc.env"
   engine: "sops"
@@ -228,7 +230,10 @@ fn test_add_to_global_config_creates_targets() {
     shadow_secret::init::add_to_global_config(env.project_dir()).unwrap();
 
     // Verify project was added
-    let global_config_path = env.temp_dir.path().join(".shadow-secret.yaml");
+    let global_config_path = env.temp_dir.path()
+        .join(".config")
+        .join("shadow-secret")
+        .join("global.yaml");
     let content = fs::read_to_string(&global_config_path).unwrap();
 
     assert!(content.contains("targets:"));
