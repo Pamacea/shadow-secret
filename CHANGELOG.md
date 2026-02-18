@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-02-18
+
+### Fixed
+
+- **update command**: Fixed cross-platform npm command execution
+  - Now uses `which` crate to find npm executable on all platforms
+  - Resolves issue where `npm view` failed on Windows (npm.cmd not found)
+  - Works correctly on Windows, Linux, and macOS
+
+### Changed
+
+- **License**: Changed from MIT to GPL-3.0
+  - All derivatives must now be shared under the same license
+  - Prevents proprietary use of the codebase
+
 ## [0.5.5] - 2026-02-18
 
 ### Changed
