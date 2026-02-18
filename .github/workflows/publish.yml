@@ -23,25 +23,25 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary_name: shadow-secret.exe
-            artifact_name: binary-windows
+            output_name: shadow-secret.exe
 
           # Linux (x64)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             binary_name: shadow-secret
-            artifact_name: binary-linux
+            output_name: shadow-secret
 
           # macOS (x64)
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: shadow-secret
-            artifact_name: binary-macos-x64
+            output_name: shadow-secret-x64
 
           # macOS (ARM64)
           - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: shadow-secret
-            artifact_name: binary-macos-arm64
+            output_name: shadow-secret-arm64
 
     steps:
       - name: Checkout
@@ -65,12 +65,19 @@ jobs:
         working-directory: packages/core
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Rename binary
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cp packages/core/target/${{ matrix.target }}/release/${{ matrix.binary_name }} artifacts/${{ matrix.output_name }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: packages/core/target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+          name: ${{ matrix.target }}-binary
+          path: artifacts/${{ matrix.output_name }}
           if-no-files-found: error
+          retention-days: 1
 
   publish:
     name: Publish to NPM
@@ -90,34 +97,17 @@ jobs:
       - name: Create bin directory
         run: mkdir -p packages/cli-npm/bin
 
-      - name: Download Windows binary
+      - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
-          name: binary-windows
-          path: packages/cli-npm/bin/shadow-secret.exe
-
-      - name: Download Linux binary
-        uses: actions/download-artifact@v4
-        with:
-          name: binary-linux
-          path: packages/cli-npm/bin/shadow-secret
-
-      - name: Download macOS x64 binary
-        uses: actions/download-artifact@v4
-        with:
-          name: binary-macos-x64
-          path: packages/cli-npm/bin/shadow-secret-x64
-
-      - name: Download macOS ARM64 binary
-        uses: actions/download-artifact@v4
-        with:
-          name: binary-macos-arm64
-          path: packages/cli-npm/bin/shadow-secret-arm64
+          pattern: '*-binary'
+          path: packages/cli-npm/bin
+          merge-multiple: true
 
       - name: Set executable permissions
         working-directory: packages/cli-npm/bin
         run: |
-          chmod +x shadow-secret shadow-secret-x64 shadow-secret-arm64 || true
+          chmod +x shadow-secret shadow-secret-x64 shadow-secret-arm64 2>/dev/null || true
 
       - name: Verify binaries
         working-directory: packages/cli-npm
