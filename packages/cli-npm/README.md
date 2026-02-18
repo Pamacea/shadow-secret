@@ -8,9 +8,6 @@ A secure, distributed secret management system for modern development workflows.
 # Install via NPM
 npm install -g @oalacea/shadow-secret
 
-# Install via crates.io
-cargo install shadow-secret
-
 # Option 1: Initialize global configuration (recommended for first-time users)
 shadow-secret init-global
 
@@ -389,7 +386,7 @@ targets:
 
 ## License
 
-GPL-3.0 - see [LICENSE](LICENSE) file
+GPL-3.0 - see [LICENSE](../LICENSE) file
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

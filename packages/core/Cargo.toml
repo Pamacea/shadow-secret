@@ -1,10 +1,10 @@
 [package]
 name = "shadow-secret"
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 authors = ["Yanis <yanis@example.com>"]
 description = "A secure, distributed secret management system written in Rust"
-license = "MIT"
+license = "GPL-3.0"
 repository = "https://github.com/Pamacea/shadow-secret"
 readme = "README.md"
 keywords = ["secret", "security", "vault", "distributed", "encryption"]

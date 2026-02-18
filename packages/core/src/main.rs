@@ -17,7 +17,7 @@ use std::process::Command;
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <oalacea@proton.me>")]
-#[command(version = "0.5.5")]
+#[command(version = "0.5.6")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -611,7 +611,12 @@ fn get_current_version() -> Result<String> {
 fn get_latest_version() -> Result<String> {
     println!("🔍 Checking for updates on NPM...\n");
 
-    let output = Command::new("npm")
+    // On Windows, npm is npm.cmd; on Unix, it's npm
+    // Use which to find the actual npm executable
+    let npm_exe = which::which("npm")
+        .context("Failed to find 'npm'. Is NPM installed and in PATH?")?;
+
+    let output = Command::new(&npm_exe)
         .args(["view", "@oalacea/shadow-secret", "version"])
         .output()
         .context("Failed to execute 'npm view'. Is NPM installed?")?;
@@ -654,7 +659,12 @@ fn run_update(check_only: bool) -> Result<()> {
 
     println!("📥 Installing @oalacea/shadow-secret@{}...\n", latest);
 
-    let output = Command::new("npm")
+    // On Windows, npm is npm.cmd; on Unix, it's npm
+    // Use which to find the actual npm executable
+    let npm_exe = which::which("npm")
+        .context("Failed to find 'npm'. Is NPM installed and in PATH?")?;
+
+    let output = Command::new(&npm_exe)
         .args(["install", "-g", "@oalacea/shadow-secret@latest"])
         .status()
         .context("Failed to execute 'npm install'. Is NPM installed?")?;

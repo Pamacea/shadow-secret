@@ -1,6 +1,6 @@
 {
   "name": "@oalacea/shadow-secret",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Secure secret management for modern development workflows",
   "bin": {
     "shadow-secret": "lib/bridge.js"
@@ -23,7 +23,7 @@
     "rust"
   ],
   "author": "Yanis <yanis@example.com>",
-  "license": "MIT",
+  "license": "GPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Pamacea/shadow-secret"

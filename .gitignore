@@ -39,3 +39,7 @@ test-output/
 
 # Node modules (if any for tooling)
 node_modules/
+
+.smite/
+.claude/
+.ex-g-se/
