@@ -1,14 +1,13 @@
-# Shadow Secret - Project Context
+# Oalacea Shadow Secret - Project Context
 
-> **Version:** 0.3.3 (Released)
-> **Type:** CLI Tool (Rust + NPM wrapper)
+> **Version:** 0.6.0 | **Type:** CLI Tool (Rust)
 > **Status:** Active Development
 
 ---
 
 ## 🎯 Project Overview
 
-**Shadow Secret** is a secure, distributed secret management system that temporarily injects decrypted secrets (via SOPS) into configuration files, then automatically wipes them when the session ends.
+**Oalacea Shadow Secret** is a secure, distributed secret management system that temporarily injects decrypted secrets (via SOPS) into configuration files, then automatically wipes them when the session ends.
 
 ### Core Philosophy
 
@@ -20,49 +19,26 @@
 
 ## 🏗️ Architecture
 
-### Monorepo Structure
+### Project Structure
 
 ```
 shadow-secret/
-├── packages/
-│   ├── core/              # Rust project (the engine)
-│   │   ├── src/           # Source code
-│   │   ├── tests/         # Integration tests
-│   │   ├── Cargo.toml     # Rust dependencies
-│   │   └── global.yaml  # Config template
-│   └── cli-npm/           # NPM wrapper (distribution)
-│       ├── bin/           # Compiled binaries (gitignored)
-│       ├── lib/           # bridge.js (OS detection + spawning)
-│       └── package.json   # NPM manifest
-├── docs/                  # Technical documentation
-├── .github/               # CI/CD workflows
-├── .gitignore
-├── README.md
-├── CHANGELOG.md
-├── CLAUDE.md              # This file
-└── LICENSE
+├── src/              # Source code
+│   ├── main.rs       # CLI entry point
+│   ├── config.rs     # Configuration parsing
+│   ├── vault.rs      # Vault operations
+│   ├── injector.rs   # Secret injection
+│   ├── cleaner.rs    # Backup restoration
+│   ├── init.rs       # Project initialization
+│   └── cloud/        # Cloud integrations
+├── tests/            # Integration tests
+├── Cargo.toml        # Dependencies
+└── docs/             # Technical documentation
 ```
-
-### Component Responsibilities
-
-**Core (Rust):**
-- Decrypt secrets using SOPS
-- Inject into target files
-- Restore on exit
-- Platform-agnostic (no NPM awareness)
-- Extensions: init-project, push-cloud
-
-**CLI-NPM (Node.js):**
-- Detect user's OS (Windows/Unix)
-- Spawn correct binary
-- Forward all arguments
-- Terminal inheritance (stdio: 'inherit')
 
 ---
 
 ## 🛠️ Tech Stack
-
-### Core (Rust)
 
 **Language:** Rust 2021 edition
 
@@ -87,75 +63,53 @@ strip = true
 panic = "abort"
 ```
 
-### Distribution (Node.js)
-
-**Runtime:** Node.js (any version, used only for spawn)
-
-**Package:** NPM registry distribution
-
-**Key Files:**
-- `lib/bridge.js` - OS detection and binary spawning
-- `package.json` - NPM manifest with bin entry point
-
 ---
 
 ## 📋 Development Workflows
 
-### Build Rust Binary
+### Build
 
 ```bash
-cd packages/core
-
-# Development build (unoptimized)
-cargo build
-
-# Release build (optimized, stripped)
+# Release build
 cargo build --release
 
+# Development build
+cargo build
+```
+
+### Test
+
+```bash
 # Run tests
 cargo test
 
-# Check compilation
-cargo check
+# Run specific test
+cargo test test_name
 ```
 
-### Test NPM Wrapper (Development)
+### Install Local
 
 ```bash
-# 1. Build the Rust binary
-cd packages/core
-cargo build --release
+# Install from local path
+cargo install --path .
 
-# 2. Copy to bin directory (manual for dev)
-cp target/release/shadow-secret.exe ../cli-npm/bin/  # Windows
-cp target/release/shadow-secret ../cli-npm/bin/       # Unix
-
-# 3. Test the wrapper
-cd ../cli-npm
-node lib/bridge.js --version
-# Or: npm link && shadow-secret --version
+# Force reinstall
+cargo install --path . --force
 ```
 
-### Full Release Workflow
+### Publish to crates.io
 
 ```bash
-# 1. Build release binaries
-cd packages/core
-cargo build --release
+# 1. Update version in Cargo.toml
+# 2. Commit changes
+git add .
+git commit -m "Release vX.Y.Z"
 
-# 2. Copy binaries to cli-npm/bin
-# Windows
-cp target/release/shadow-secret.exe ../cli-npm/bin/
-# macOS/Linux
-cp target/release/shadow-secret ../cli-npm/bin/
+# 3. Publish
+cargo publish
 
-# 3. Publish to NPM
-cd ../cli-npm
-npm publish
-
-# 4. Tag and push to Git (from repo root)
-cd ../..
-git tag -a v0.1.0 -m "Release v0.1.0"
+# 4. Tag and push
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push --follow-tags
 ```
 
@@ -172,7 +126,7 @@ Check prerequisites and system configuration.
 - `age` installation
 - `SOPS_AGE_KEY_FILE` environment variable
 - Master key file existence
-- `global.yaml` accessibility
+- Configuration accessibility
 
 ### `unlock`
 
@@ -201,6 +155,15 @@ Bootstrap a new project with secret infrastructure.
 - `--no-example` - Skip placeholder creation
 - `--no-global` - Skip global config prompt
 
+### `init-global`
+
+Initialize global Shadow Secret configuration.
+
+**Creates:**
+- `~/.config/shadow-secret/global.yaml`
+- `~/.config/shadow-secret/global.enc.env`
+- `~/.config/shadow-secret/.sops.yaml`
+
 ### `push-cloud`
 
 Push local secrets to Vercel environment variables.
@@ -210,6 +173,15 @@ Push local secrets to Vercel environment variables.
 - Filter out `LOCAL_ONLY_*` prefixed secrets
 - Dry-run mode for testing
 - User confirmation before push
+
+### `update`
+
+Update to the latest version from crates.io.
+
+**Features:**
+- Check for updates without installing
+- Automatic installation via cargo
+- Force reinstall option
 
 ---
 
@@ -229,13 +201,6 @@ Secrets only exist in target files while process runs:
 - Signal handlers for SIGINT, SIGTERM
 - Backup registration for all modified files
 
-### Distribution Safety
-
-- Compiled binaries gitignored
-- Injected during CI/CD only
-- No secrets in repository
-- `.enc` files never committed
-
 ---
 
 ## 🧪 Testing
@@ -243,54 +208,15 @@ Secrets only exist in target files while process runs:
 ### Unit Tests
 
 ```bash
-cd packages/core
 cargo test
 ```
 
 ### Integration Tests
 
-Located in `packages/core/tests/`:
+Located in `tests/`:
 - Test vault encryption/decryption
 - Test file injection/restoration
 - Test CLI commands
-
-### Manual Testing
-
-```bash
-# 1. Build and setup
-cd packages/core && cargo build --release
-cp target/release/shadow-secret ../cli-npm/bin/
-
-# 2. Test doctor command
-shadow-secret doctor
-
-# 3. Test init-project
-shadow-secret init-project
-
-# 4. Test unlock
-shadow-secret unlock
-
-# 5. Test push-cloud (dry-run)
-shadow-secret push-cloud --dry-run
-```
-
----
-
-## 🚀 CI/CD Pipeline
-
-### GitHub Actions Workflow
-
-**Steps:**
-1. Checkout code
-2. Install Rust toolchain
-3. Build release binary (`cargo build --release`)
-4. Copy binary to `packages/cli-npm/bin/`
-5. Publish to NPM (on tag only)
-6. Create GitHub Release
-
-**Triggers:**
-- Push to main
-- Git tags (for releases)
 
 ---
 
@@ -304,7 +230,7 @@ shadow-secret push-cloud --dry-run
 
 ### Commit Convention
 
-Follow [Git Flow Master](https://github.com/Pamacea/git-flow-master) conventions:
+Follow Git Flow Master conventions:
 
 ```
 TYPE: Shadow Secret - vX.Y.Z
@@ -319,86 +245,14 @@ Types:
 
 ---
 
-## 🌍 Multi-Platform Release Strategy (v0.3.0)
-
-**Documentation:** See [docs/MULTI_PLATFORM_STRATEGY.md](../docs/MULTI_PLATFORM_STRATEGY.md)
-
-### Overview
-
-Starting with v0.3.0, Shadow Secret will use **GitHub Actions** to:
-
-1. **Automatically compile binaries** for all platforms on release
-2. **Package all binaries** in single NPM package
-3. **Publish to NPM** automatically on tag push
-
-### Supported Platforms
-
-| Platform | Architecture | Binary Name |
-|----------|-------------|-------------|
-| Windows | x64 | `shadow-secret.exe` |
-| Linux | x64 | `shadow-secret` |
-| macOS | x64 | `snapshot-secret` |
-| macOS | ARM64 (Apple Silicon) | `shadow-secret` |
-
-### Release Workflow
-
-```bash
-# 1. Update versions
-# Edit packages/core/Cargo.toml
-# Edit packages/cli-npm/package.json
-
-# 2. Tag and push (triggers CI/CD)
-git tag -a v0.3.0 -m "Release v0.3.0 - Multi-Platform Support"
-git push origin main
-git push origin v0.3.0
-
-# 3. GitHub Actions automatically:
-#    - Builds for all 4 platforms
-#    - Packages all binaries in NPM package
-#    - Publishes to @oalacea/shadow-secret
-```
-
-### Development Workflow
-
-For testing before release:
-
-```bash
-# Build locally (your platform only)
-cd packages/core
-cargo build --release
-cp target/release/shadow-secret.exe ../cli-npm/bin/  # Windows
-cp target/release/shadow-secret ../cli-npm/bin/       # Unix
-
-# Test locally
-cd ../cli-npm
-npm pack
-npm install -g ./oalacea-shadow-secret-0.3.0.tgz
-shadow-secret --version
-```
-
-### GitHub Actions Workflow
-
-**File:** `.github/workflows/publish.yml`
-
-**Triggers:** Push to `main` with tag pattern `v*`
-
-**Matrix Build:**
-- Ubuntu Linux (x86_64-unknown-linux-gnu)
-- macOS x64 (x86_64-apple-darwin)
-- macOS ARM64 (aarch64-apple-darwin)
-- Windows (x86_64-pc-windows-msvc)
-
-**Result:** All 4 binaries compiled and packaged automatically
-
----
-
 ## 🔗 Resources
 
 - **Repository:** https://github.com/Pamacea/shadow-secret
+- **crates.io:** https://crates.io/crates/oalacea-shadow-secret
 - **SOPS:** https://github.com/getsops/sops
 - **Age:** https://github.com/FiloSottile/age
 - **Vercel CLI:** https://github.com/vercel/vercel
 
 ---
 
-*Last Updated: 2025-02-15*
+*Last Updated: 2025-03-23*

@@ -6,9 +6,9 @@ mod cleaner;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use shadow_secret::cloud::vercel::{detect_project_id, push_secrets_to_vercel};
-use shadow_secret::config::Config;
-use shadow_secret::vault::Vault;
+use oalacea_shadow_secret::cloud::vercel::{detect_project_id, push_secrets_to_vercel};
+use oalacea_shadow_secret::config::Config;
+use oalacea_shadow_secret::vault::Vault;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -17,7 +17,7 @@ use std::process::Command;
 #[derive(Parser, Debug)]
 #[command(name = "shadow-secret")]
 #[command(author = "Yanis <oalacea@proton.me>")]
-#[command(version = "0.5.6")]
+#[command(version = "0.6.0")]
 #[command(about = "A secure, distributed secret management system", long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -72,7 +72,7 @@ enum Commands {
         dry_run: bool,
     },
 
-    /// Update Shadow Secret to latest version from NPM
+    /// Update Shadow Secret to latest version from crates.io
     Update {
         /// Check for updates without installing
         #[arg(long, default_value = "false")]
@@ -400,7 +400,7 @@ fn run_unlock(config_path: &str) -> Result<()> {
         let placeholders: Vec<String> = target.placeholders.iter().cloned().collect();
 
         // Inject secrets
-        let backup = shadow_secret::injector::inject_secrets(
+        let backup = oalacea_shadow_secret::injector::inject_secrets(
             Path::new(&target.path),
             secrets,
             &placeholders,
@@ -478,7 +478,7 @@ fn run_unlock_global() -> Result<()> {
 
         let placeholders: Vec<String> = target.placeholders.iter().cloned().collect();
 
-        let backup = shadow_secret::injector::inject_secrets(
+        let backup = oalacea_shadow_secret::injector::inject_secrets(
             Path::new(&target.path),
             secrets,
             &placeholders,
@@ -513,13 +513,13 @@ fn run_init_project(
     no_example: bool,
     no_global: bool,
 ) -> Result<()> {
-    use shadow_secret::init::init_project;
+    use oalacea_shadow_secret::init::init_project;
 
-    let config = shadow_secret::init::InitConfig {
+    let config = oalacea_shadow_secret::init::InitConfig {
         master_key_path: if let Some(path) = master_key {
             PathBuf::from(path)
         } else {
-            shadow_secret::init::get_default_master_key_path()
+            oalacea_shadow_secret::init::get_default_master_key_path()
         },
         create_example: !no_example,
         prompt_global: !no_global,
@@ -529,7 +529,7 @@ fn run_init_project(
 }
 
 fn run_init_global() -> Result<()> {
-    use shadow_secret::init::init_global;
+    use oalacea_shadow_secret::init::init_global;
 
     init_global()
 }
@@ -609,28 +609,31 @@ fn get_current_version() -> Result<String> {
 }
 
 fn get_latest_version() -> Result<String> {
-    println!("🔍 Checking for updates on NPM...\n");
+    println!("🔍 Checking for updates on crates.io...\n");
 
-    // On Windows, npm is npm.cmd; on Unix, it's npm
-    // Use which to find the actual npm executable
-    let npm_exe = which::which("npm")
-        .context("Failed to find 'npm'. Is NPM installed and in PATH?")?;
-
-    let output = Command::new(&npm_exe)
-        .args(["view", "@oalacea/shadow-secret", "version"])
+    // Use cargo search to get the latest version from crates.io
+    let output = Command::new("cargo")
+        .args(["search", "oalacea-shadow-secret", "--limit", "1"])
         .output()
-        .context("Failed to execute 'npm view'. Is NPM installed?")?;
+        .context("Failed to execute 'cargo search'. Is Cargo installed?")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("npm view failed: {}", stderr));
+        return Err(anyhow::anyhow!("cargo search failed: {}", stderr));
     }
 
-    let version = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .to_string();
+    // Parse output from: "oalacea-shadow-secret = \"0.5.6\" # description"
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if let Some(line) = stdout.lines().next() {
+        if let Some(version_start) = line.find("\"") {
+            if let Some(version_end) = line[version_start + 1..].find("\"") {
+                let version = &line[version_start + 1..version_start + 1 + version_end];
+                return Ok(version.to_string());
+            }
+        }
+    }
 
-    Ok(version)
+    Err(anyhow::anyhow!("Failed to parse version from cargo search output"))
 }
 
 fn run_update(check_only: bool) -> Result<()> {
@@ -657,20 +660,16 @@ fn run_update(check_only: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("📥 Installing @oalacea/shadow-secret@{}...\n", latest);
+    println!("📥 Installing oalacea-shadow-secret v{} from crates.io...\n", latest);
 
-    // On Windows, npm is npm.cmd; on Unix, it's npm
-    // Use which to find the actual npm executable
-    let npm_exe = which::which("npm")
-        .context("Failed to find 'npm'. Is NPM installed and in PATH?")?;
-
-    let output = Command::new(&npm_exe)
-        .args(["install", "-g", "@oalacea/shadow-secret@latest"])
+    // Use cargo install to update from crates.io
+    let output = Command::new("cargo")
+        .args(["install", "oalacea-shadow-secret", "--force"])
         .status()
-        .context("Failed to execute 'npm install'. Is NPM installed?")?;
+        .context("Failed to execute 'cargo install'. Is Cargo installed?")?;
 
     if !output.success() {
-        return Err(anyhow::anyhow!("npm install failed with exit code: {:?}", output));
+        return Err(anyhow::anyhow!("cargo install failed with exit code: {:?}", output));
     }
 
     println!();
@@ -678,6 +677,7 @@ fn run_update(check_only: bool) -> Result<()> {
     println!();
     println!("🎉 Shadow Secret has been updated!");
     println!("💡 Run 'shadow-secret --version' to verify the update.");
+    println!("💡 Make sure ~/.cargo/bin is in your PATH.");
 
     Ok(())
 }
@@ -772,7 +772,7 @@ fn main() -> Result<()> {
             if let Err(e) = run_update(check_only) {
                 eprintln!("\nError: {}", e);
                 eprintln!("\n⚠️  Update failed.");
-                eprintln!("💡 You can manually update with: npm install -g @oalacea/shadow-secret@latest");
+                eprintln!("💡 You can manually update with: cargo install oalacea-shadow-secret --force");
                 std::process::exit(1);
             }
         }

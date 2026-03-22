@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-03-23
+
+### BREAKING CHANGES
+
+- **Crate renamed**: Package renamed from `shadow-secret` to `oalacea-shadow-secret`
+  - Install command changed: `cargo install oalacea-shadow-secret`
+  - Binary name remains: `shadow-secret` (command unchanged)
+  - NPM package distribution discontinued
+
+### Changed
+
+- **Distribution**: Switched from NPM to pure Cargo/crates.io distribution
+  - Removed NPM wrapper and monorepo structure
+  - Simplified project structure (single Rust crate at root)
+  - Update command now uses `cargo install` instead of `npm install`
+
+### Removed
+
+- **NPM package**: `@oalacea/shadow-secret` no longer published to NPM
+- **Multi-platform workflow**: GitHub Actions NPM publishing removed
+
+### Added
+
+- **crates.io**: Package published to https://crates.io/crates/oalacea-shadow-secret
+
 ## [0.5.6] - 2026-02-18
 
 ### Fixed

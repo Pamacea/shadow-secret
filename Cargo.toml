@@ -1,14 +1,18 @@
 [package]
-name = "shadow-secret"
-version = "0.5.6"
+name = "oalacea-shadow-secret"
+version = "0.6.0"
 edition = "2021"
-authors = ["Yanis <yanis@example.com>"]
+authors = ["Yanis <oalacea@proton.me>"]
 description = "A secure, distributed secret management system written in Rust"
 license = "GPL-3.0"
 repository = "https://github.com/Pamacea/shadow-secret"
 readme = "README.md"
-keywords = ["secret", "security", "vault", "distributed", "encryption"]
+keywords = ["secret", "security", "vault", "distributed", "encryption", "sops", "age"]
 categories = ["command-line-utilities", "cryptography"]
+
+[[bin]]
+name = "shadow-secret"
+path = "src/main.rs"
 
 [dependencies]
 # Serialization
