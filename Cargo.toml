@@ -7,7 +7,7 @@ description = "A secure, distributed secret management system written in Rust"
 license = "GPL-3.0"
 repository = "https://github.com/Pamacea/shadow-secret"
 readme = "README.md"
-keywords = ["secret", "security", "vault", "distributed", "encryption", "sops", "age"]
+keywords = ["secret", "security", "vault", "encryption", "sops"]
 categories = ["command-line-utilities", "cryptography"]
 
 [[bin]]
